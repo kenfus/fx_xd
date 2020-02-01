@@ -14,11 +14,15 @@ import backtrader.feeds as btfeeds
 token_to_trade = 'EUR/GBP'
 time_frame = 'D1'
 start_dt = dt.datetime(2019, 1, 1)
-stop_dt = dt.datetime(2019, 12, 24)
+stop_dt = dt.datetime(2019, 12, 31)
 server_type = 'demo' # server = 'real' for live
 config_file_path = 'fxcm.cfg'
 renaming = {'bidopen': 'open', 'bidclose': 'close', 'bidhigh':'high', 'bidlow':'low', 'tickqty':'volume'}
 timeframe = bt.TimeFrame.Minutes
+cash_amount = 1000
+leverage = 50
+cash_trading = cash_amount * leverage
+order_size = 0.02*cash_trading
 ###
 
 ### Connection to FXCM-server and import the config-file
@@ -38,8 +42,8 @@ plt.show
 class SmaCross(bt.Strategy):
     # list of parameters which are configurable for the strategy
     params = dict(
-        pfast=2,  # period for the fast moving average
-        pslow=4   # period for the slow moving average
+        pfast=20,  # period for the fast moving average
+        pslow=30   # period for the slow moving average
     )
 
     def __init__(self):
@@ -50,7 +54,7 @@ class SmaCross(bt.Strategy):
     def next(self):
         if not self.position:  # not in the market
             if self.crossover > 0:  # if fast crosses slow to the upside
-                self.buy()  # enter long
+                self.buy(size = order_size) # enter long
 
         elif self.crossover < 0:  # in the market & cross to the downside
             self.close()  # close long position
@@ -78,7 +82,7 @@ dataframe = transform_data(data)
 data_to_backtest = bt.feeds.PandasData(dataname=dataframe, timeframe=timeframe, openinterest=None)
 cerebro.adddata(data_to_backtest)
 # Set our desired cash start
-cerebro.broker.setcash(100000.0)
+cerebro.broker.setcash(cash_amount)
 
 # Set the commission - 0.1% ... divide by 100 to remove the %
 cerebro.broker.setcommission(commission=0.001)
