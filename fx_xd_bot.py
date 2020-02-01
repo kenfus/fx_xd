@@ -1,9 +1,6 @@
 import fxcmpy
 import datetime as dt
 import backtrader as bt
-import matplotlib
-matplotlib.use('TKAgg')
-import matplotlib.pyplot as plt
 
 #
 ###
@@ -11,15 +8,15 @@ import matplotlib.pyplot as plt
 token_to_trade = 'EUR/GBP'
 time_frame = 'D1'
 start_dt = dt.datetime(2019, 1, 1)
-stop_dt = dt.datetime(2019, 12, 31)
+stop_dt = dt.datetime(2020, 1, 31)
 server_type = 'demo' # server = 'real' for live
 config_file_path = 'fxcm.cfg'
 renaming = {'bidopen': 'open', 'bidclose': 'close', 'bidhigh':'high', 'bidlow':'low', 'tickqty':'volume'}
-timeframe = bt.TimeFrame.Minutes
-cash_amount = 1000
-leverage = 50
-cash_trading = cash_amount * leverage
-order_size = 0.02*cash_trading
+timeframe = bt.TimeFrame.Days
+cash_amount = 10000
+leverage = 100
+order_size = 0.2 * cash_amount
+commission = 0.001
 ###
 
 ### Connection to FXCM-server and import the config-file
@@ -45,7 +42,7 @@ class SmaCross(bt.Strategy):
     def next(self):
         if not self.position:  # not in the market
             if self.crossover > 0:  # if fast crosses slow to the upside
-                self.buy(size = order_size) # enter long
+                self.order = self.buy(size=order_size)
 
 
         elif self.crossover < 0:  # in the market & cross to the downside
@@ -78,15 +75,19 @@ cerebro.adddata(data_to_backtest)
 cerebro.broker.setcash(cash_amount)
 
 # Set the commission - 0.1% ... divide by 100 to remove the %
-cerebro.broker.setcommission(commission=0.001)
+cerebro.broker.setcommission(commission=commission)
 # Startingvalue
-print('Starting Portfolio Value: %.2f' % cerebro.broker.getvalue())
+
+start_value = cerebro.broker.getvalue()
+print('Starting Portfolio Value: %.2f' % start_value)
 
 # Gogo gadget cerebro
 cerebro.run()
 
+
 # Value after applying strategy
-print('Final Portfolio Value: %.2f' % cerebro.broker.getvalue())
+end_value = start_value + (cerebro.broker.getvalue()-start_value)*leverage
+print('Final Portfolio Value: %.2f' % end_value)
 
 # Plot the results
-cerebro.plot(openinterest = None, volume = None)
+cerebro.plot(openinterest = None, volume = None, iplot=False)
