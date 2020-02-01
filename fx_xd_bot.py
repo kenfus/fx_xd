@@ -42,6 +42,8 @@ class SmaCross(bt.SignalStrategy):
         self.lines.signal = sma1 - sma2
 ###
 
+### Start the backtest
+
 ### Helper Functions:
 def transform_data(df):
     return fxcm_df_to_bt_df(df, start_dt, stop_dt, token_to_trade, time_frame, renaming)

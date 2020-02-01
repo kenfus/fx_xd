@@ -12,4 +12,3 @@ def fxcm_df_to_bt_df(df, start_dt, stop_dt, token_to_trade, time_frame, renaming
         df.reset_index(inplace = True)
     df.rename(renaming, axis='index', inplace = True)
     return df
-    
