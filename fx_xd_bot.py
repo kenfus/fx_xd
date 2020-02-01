@@ -26,10 +26,7 @@ order_size = 0.02*cash_trading
 con = fxcmpy.fxcmpy(config_file=config_file_path, server=server_type) 
 instruments = con.get_instruments()
 data = con.get_candles(token_to_trade, period = time_frame, start = start_dt, stop = stop_dt)
-<<<<<<< HEAD
 
-=======
->>>>>>> 58b9df8301e89bcad34006056d61a044de1921e6
 con.close()
 ###
 
@@ -121,9 +118,4 @@ end_value_leverage = starting_value + (end_value - starting_value) * leverage
 print('Final Portfolio Value: %.2f' % end_value_leverage)
 
 # Plot the results
-<<<<<<< HEAD
-cerebro.plot(openinterest=None, volume = None)
-
-=======
 cerebro.plot(openinterest = None, volume = None)
->>>>>>> 58b9df8301e89bcad34006056d61a044de1921e6
