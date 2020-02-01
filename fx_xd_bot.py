@@ -1,14 +1,11 @@
 import fxcmpy
-import pandas as pd
-import plotly.express as px
 import datetime as dt
-import numpy as np
-from pylab import plt
-from pandas.plotting import register_matplotlib_converters
 import backtrader as bt
-import backtrader.feeds as btfeeds
+import matplotlib
+matplotlib.use('TKAgg')
+import matplotlib.pyplot as plt
 
-
+#
 ###
 #Define Parameters here!
 token_to_trade = 'EUR/GBP'
@@ -29,16 +26,12 @@ order_size = 0.02*cash_trading
 con = fxcmpy.fxcmpy(config_file=config_file_path, server=server_type) 
 instruments = con.get_instruments()
 data = con.get_candles(token_to_trade, period = time_frame, start = start_dt, stop = stop_dt)
+<<<<<<< HEAD
 
+=======
+>>>>>>> 58b9df8301e89bcad34006056d61a044de1921e6
 con.close()
 ###
-
-# Overview and check if data getting was succesful
-register_matplotlib_converters()
-plt.style.use('seaborn')
-plt.figure(figsize = (10,6))
-plt.plot(data['askclose'])
-plt.show
 
 ### Define Indicators and signals
 class SmaCross(bt.Strategy):
@@ -57,6 +50,7 @@ class SmaCross(bt.Strategy):
         if not self.position:  # not in the market
             if self.crossover > 0:  # if fast crosses slow to the upside
                 self.buy(size = order_size) # enter long
+
 
         elif self.crossover < 0:  # in the market & cross to the downside
             self.close()  # close long position
@@ -108,6 +102,7 @@ dataframe = transform_data(data)
 # Transform and feed data to backtrader and set parameters for the broker
 data_to_backtest = bt.feeds.PandasData(dataname=dataframe, timeframe=timeframe, openinterest=None)
 cerebro.adddata(data_to_backtest)
+
 # Set our desired cash start
 cerebro.broker.setcash(cash_amount)
 
@@ -126,5 +121,9 @@ end_value_leverage = starting_value + (end_value - starting_value) * leverage
 print('Final Portfolio Value: %.2f' % end_value_leverage)
 
 # Plot the results
+<<<<<<< HEAD
 cerebro.plot(openinterest=None, volume = None)
 
+=======
+cerebro.plot(openinterest = None, volume = None)
+>>>>>>> 58b9df8301e89bcad34006056d61a044de1921e6
