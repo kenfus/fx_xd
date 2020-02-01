@@ -1,7 +1,7 @@
 import fxcmpy
 import pandas as pd
 import plotly.express as px
-import datetime as a
+import datetime as dt
 import numpy as np
 from pylab import plt
 from pandas.plotting import register_matplotlib_converters
@@ -30,8 +30,4 @@ plt.plot(data['pandas_SMA_3'])
 plt.plot(data['pandas_SMA_50'])
 plt.show
 
-con.subscribe_market_data('EUR/CHF')
-con.get_subscribed_symbols()
-con.is_subscribed('EUR/CHF')
-
-con.get_last_price('EUR/CHF')
+con.close()
