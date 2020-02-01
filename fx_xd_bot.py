@@ -7,10 +7,7 @@ from pylab import plt
 from pandas.plotting import register_matplotlib_converters
 import backtrader as bt
 import backtrader.feeds as btfeeds
-<<<<<<< HEAD
-=======
 from fx_xd_helper_functions import fxcm_df_to_bt_df
->>>>>>> 0c94befd74a7fd7fbf00b2913f73ff658808482f
 
 
 
@@ -44,17 +41,14 @@ class SmaCross(bt.SignalStrategy):
         sma1, sma2 = bt.ind.SMA(period=10), bt.ind.SMA(period=30)
         self.lines.signal = sma1 - sma2
 ###
-<<<<<<< HEAD
-'''
+
 ### Start the backtest
-=======
 
 ### Helper Functions:
 def transform_data(df):
     return fxcm_df_to_bt_df(df, start_dt, stop_dt, token_to_trade, time_frame, renaming)
 ###
 # Initialize Cerebro:
->>>>>>> 0c94befd74a7fd7fbf00b2913f73ff658808482f
 cerebro = bt.Cerebro()
 
 # Add strategy to cerebro
