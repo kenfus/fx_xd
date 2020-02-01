@@ -4,6 +4,7 @@ import backtrader as bt
 import matplotlib
 matplotlib.use('TKAgg')
 import matplotlib.pyplot as plt
+
 #
 ###
 #Define Parameters here!
@@ -15,6 +16,10 @@ server_type = 'demo' # server = 'real' for live
 config_file_path = 'fxcm.cfg'
 renaming = {'bidopen': 'open', 'bidclose': 'close', 'bidhigh':'high', 'bidlow':'low', 'tickqty':'volume'}
 timeframe = bt.TimeFrame.Minutes
+cash_amount = 1000
+leverage = 50
+cash_trading = cash_amount * leverage
+order_size = 0.02*cash_trading
 ###
 
 ### Connection to FXCM-server and import the config-file
@@ -40,7 +45,8 @@ class SmaCross(bt.Strategy):
     def next(self):
         if not self.position:  # not in the market
             if self.crossover > 0:  # if fast crosses slow to the upside
-                self.buy(size = cerebro.broker.cash*0.02)
+                self.buy(size = order_size) # enter long
+
 
         elif self.crossover < 0:  # in the market & cross to the downside
             self.close()  # close long position
@@ -69,7 +75,7 @@ data_to_backtest = bt.feeds.PandasData(dataname=dataframe, timeframe=timeframe, 
 cerebro.adddata(data_to_backtest)
 
 # Set our desired cash start
-cerebro.broker.setcash(100000.0)
+cerebro.broker.setcash(cash_amount)
 
 # Set the commission - 0.1% ... divide by 100 to remove the %
 cerebro.broker.setcommission(commission=0.001)
