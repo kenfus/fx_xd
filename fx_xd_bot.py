@@ -7,7 +7,7 @@ from pylab import plt
 from pandas.plotting import register_matplotlib_converters
 import backtrader as bt
 import backtrader.feeds as btfeeds
-from fx_xd_helper_functions import change_fxcm_data_to_btfeeds
+from fx_xd_helper_functions import fxcm_df_to_bt_df
 
 
 
@@ -19,6 +19,7 @@ start_dt = dt.datetime(2019, 1, 1)
 stop_dt = dt.datetime(2019, 12, 24)
 server_type = 'demo' # server = 'real' for live
 config_file_path = 'fxcm.cfg'
+renaming = {'bidopen': 'open', 'bidclose': 'close', 'bidhigh':'high','bidlow':'low', 'tickqty':'volume'}
 ###
 
 ### Connection to FXCM-server and import the config-file
@@ -43,17 +44,22 @@ class SmaCross(bt.SignalStrategy):
 
 ### Helper Functions:
 def transform_data(df):
-    return change_fxcm_data_to_btfeeds(df, start_dt, stop_dt, token_to_trade, time_frame)
+    return fxcm_df_to_bt_df(df, start_dt, stop_dt, token_to_trade, time_frame, renaming)
 ###
-'''
-### Start the backtest
+# Initialize Cerebro:
 cerebro = bt.Cerebro()
+
+# Add strategy to cerebro
 cerebro.addstrategy(SmaCross)
 
-data_to_backtest = 
-cerebro.adddata(data0)
+# Transform data
+dataframe = transform_data(data)
 
+# Transform and feed data to backtrader
+data_to_backtest = bt.feeds.PandasData(dataname=dataframe)
+cerebro.adddata(data_to_backtest)
+# Gogo gadget cerebro
 cerebro.run()
 cerebro.plot()
-'''
+
 con.close()
