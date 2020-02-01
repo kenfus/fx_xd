@@ -13,9 +13,9 @@ class PandasData(feed.DataBase):
     DataFrame
     '''
     if 'datetime' not in df or isinstance(df.index, pandas.core.index.MultiIndex):
-    self.feed.DataBase['datetime'] = self.feed.DataBase.index
-    self.feed.DataBase = self.feed.DataBase[self.feed.DataBase.columns.get_level_values(0)]
-    self.feed.DataBase.reset_index(inplace = True)
+        self.feed.DataBase['datetime'] = self.feed.DataBase.index
+        self.feed.DataBase = self.feed.DataBase[self.feed.DataBase.columns.get_level_values(0)]
+        self.feed.DataBase.reset_index(inplace = True)
     ### bidopen 	bidclose 	bidhigh 	bidlow 	askopen 	askclose 	askhigh 	asklow 	tickqty
     params = (
         # Possible values for datetime (must always be present)

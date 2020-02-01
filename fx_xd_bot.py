@@ -7,7 +7,6 @@ from pylab import plt
 from pandas.plotting import register_matplotlib_converters
 import backtrader as bt
 import backtrader.feeds as btfeeds
-from fx_xd_helper_functions import change_fxcm_data_to_btfeeds
 
 
 
@@ -39,11 +38,6 @@ class SmaCross(bt.SignalStrategy):
     def __init__(self):
         sma1, sma2 = bt.ind.SMA(period=10), bt.ind.SMA(period=30)
         self.lines.signal = sma1 - sma2
-###
-
-### Helper Functions:
-def transform_data(df):
-    return change_fxcm_data_to_btfeeds(df, start_dt, stop_dt, token_to_trade, time_frame)
 ###
 '''
 ### Start the backtest
