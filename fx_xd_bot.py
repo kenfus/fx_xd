@@ -5,29 +5,55 @@ import datetime as dt
 import numpy as np
 from pylab import plt
 from pandas.plotting import register_matplotlib_converters
+import backtrader as bt
+import backtrader.feeds as btfeeds
+from fx_xd_helper_functions import change_fxcm_data_to_btfeeds
 
 
-con = fxcmpy.fxcmpy(config_file='fxcm.cfg', server='demo') # server = 'real' for live
 
-instruments = con.get_instruments()
-print(instruments)
-
-start_dt = dt.datetime(2019, 12, 23)
+###
+#Define Parameters here!
+token_to_trade = 'EUR/GBP'
+time_frame = 'D1'
+start_dt = dt.datetime(2019, 1, 1)
 stop_dt = dt.datetime(2019, 12, 24)
+server_type = 'demo' # server = 'real' for live
+config_file_path = 'fxcm.cfg'
+###
 
-data = con.get_candles('EUR/GBP', period='m1', start = start_dt, stop = stop_dt)  # daily data
+### Connection to FXCM-server and import the config-file
+con = fxcmpy.fxcmpy(config_file=config_file_path, server=server_type) 
+instruments = con.get_instruments()
+data = con.get_candles(token_to_trade, period = time_frame, start = start_dt, stop = stop_dt)  # daily data
+###
 
-data['pandas_SMA_3'] = data["askclose"].rolling(window=3).mean()
-data['pandas_SMA_50'] = data["askclose"].rolling(window=50).mean()
-
-
+# Overview and check if data getting was succesful
 register_matplotlib_converters()
-
 plt.style.use('seaborn')
 plt.figure(figsize = (10,6))
 plt.plot(data['askclose'])
-plt.plot(data['pandas_SMA_3'])
-plt.plot(data['pandas_SMA_50'])
 plt.show
 
+### Define Indicators and signals
+class SmaCross(bt.SignalStrategy):
+    def __init__(self):
+        sma1, sma2 = bt.ind.SMA(period=10), bt.ind.SMA(period=30)
+        self.lines.signal = sma1 - sma2
+###
+
+### Helper Functions:
+def transform_data(df):
+    return change_fxcm_data_to_btfeeds(df, start_dt, stop_dt, token_to_trade, time_frame)
+###
+'''
+### Start the backtest
+cerebro = bt.Cerebro()
+cerebro.addstrategy(SmaCross)
+
+data_to_backtest = 
+cerebro.adddata(data0)
+
+cerebro.run()
+cerebro.plot()
+'''
 con.close()
