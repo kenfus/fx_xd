@@ -1,20 +1,16 @@
 import fxcmpy
-import pandas as pd
-import plotly.express as px
 import datetime as dt
-import numpy as np
-from pylab import plt
-from pandas.plotting import register_matplotlib_converters
 import backtrader as bt
-import backtrader.feeds as btfeeds
-
-
+import matplotlib
+matplotlib.use('TKAgg')
+import matplotlib.pyplot as plt
+#
 ###
 #Define Parameters here!
 token_to_trade = 'EUR/GBP'
 time_frame = 'D1'
 start_dt = dt.datetime(2019, 1, 1)
-stop_dt = dt.datetime(2019, 12, 24)
+stop_dt = dt.datetime(2019, 12, 31)
 server_type = 'demo' # server = 'real' for live
 config_file_path = 'fxcm.cfg'
 renaming = {'bidopen': 'open', 'bidclose': 'close', 'bidhigh':'high', 'bidlow':'low', 'tickqty':'volume'}
@@ -25,21 +21,15 @@ timeframe = bt.TimeFrame.Minutes
 con = fxcmpy.fxcmpy(config_file=config_file_path, server=server_type) 
 instruments = con.get_instruments()
 data = con.get_candles(token_to_trade, period = time_frame, start = start_dt, stop = stop_dt)
+con.close()
 ###
-
-# Overview and check if data getting was succesful
-register_matplotlib_converters()
-plt.style.use('seaborn')
-plt.figure(figsize = (10,6))
-plt.plot(data['askclose'])
-plt.show
 
 ### Define Indicators and signals
 class SmaCross(bt.Strategy):
     # list of parameters which are configurable for the strategy
     params = dict(
-        pfast=2,  # period for the fast moving average
-        pslow=4   # period for the slow moving average
+        pfast=20,  # period for the fast moving average
+        pslow=30   # period for the slow moving average
     )
 
     def __init__(self):
@@ -50,7 +40,7 @@ class SmaCross(bt.Strategy):
     def next(self):
         if not self.position:  # not in the market
             if self.crossover > 0:  # if fast crosses slow to the upside
-                self.buy()  # enter long
+                self.buy(size = cerebro.broker.cash*0.02)
 
         elif self.crossover < 0:  # in the market & cross to the downside
             self.close()  # close long position
@@ -77,6 +67,7 @@ dataframe = transform_data(data)
 # Transform and feed data to backtrader and set parameters for the broker
 data_to_backtest = bt.feeds.PandasData(dataname=dataframe, timeframe=timeframe, openinterest=None)
 cerebro.adddata(data_to_backtest)
+
 # Set our desired cash start
 cerebro.broker.setcash(100000.0)
 
@@ -92,6 +83,4 @@ cerebro.run()
 print('Final Portfolio Value: %.2f' % cerebro.broker.getvalue())
 
 # Plot the results
-cerebro.plot(openinterest=None, volume = None)
-
-con.close()
+cerebro.plot(openinterest = None, volume = None)
