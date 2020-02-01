@@ -58,8 +58,8 @@ dataframe = transform_data(data)
 # Transform and feed data to backtrader
 data_to_backtest = bt.feeds.PandasData(dataname=dataframe)
 cerebro.adddata(data_to_backtest)
+
 # Gogo gadget cerebro
 cerebro.run()
-cerebro.plot()
 
 con.close()
