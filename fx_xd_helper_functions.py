@@ -3,9 +3,11 @@
 """
 Created on Sat Feb  1 12:56:52 2020
 
-@author: vincenzot, der smarte
+@author: vincenzot
 """
+import pandas as pd
 
+<<<<<<< HEAD
 
 class PandasData(feed.DataBase):
     '''
@@ -37,4 +39,11 @@ class PandasData(feed.DataBase):
         ('volume', -1),
         ('openinterest', -1),
     )
+=======
+def fxcm_df_to_bt_df(df, start_dt, stop_dt, token_to_trade, time_frame, renaming):
+    if isinstance(df.index, pd.core.index.MultiIndex):
+        df.reset_index(inplace = True)
+    df.rename(renaming, axis='index', inplace = True)
+    return df
+>>>>>>> 0c94befd74a7fd7fbf00b2913f73ff658808482f
     
