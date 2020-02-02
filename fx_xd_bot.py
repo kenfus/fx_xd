@@ -2,8 +2,8 @@ import fxcmpy
 import datetime as dt
 import backtrader as bt
 import getpass
-# Is Eric or Vincenzo using this script?
 
+# Is Eric or Vincenzo using this script?
 username = getpass.getuser().lower()
 
 ###
@@ -87,15 +87,8 @@ def fxcm_df_to_bt_df(df):
     df.rename(columns=renaming, inplace=True)
     return df
 
-
-###
-
 # Initialize Cerebro:
 cerebro = bt.Cerebro()
-
-
-# Add strategy to cerebro
-cerebro.addstrategy(StratEric)
 
 # Add strategy to cerebro. To avoid merge errors, it detectes which strategy to apply
 if username.find('vinc') >= 0:
