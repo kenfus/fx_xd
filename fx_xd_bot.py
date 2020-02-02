@@ -2,8 +2,8 @@ import fxcmpy
 import datetime as dt
 import backtrader as bt
 import getpass
-# Is Eric or Vincenzo using this script?
 
+# Is Eric or Vincenzo using this script?
 username = getpass.getuser().lower()
 
 ###
