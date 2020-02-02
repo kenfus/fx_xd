@@ -1,6 +1,10 @@
 import fxcmpy
 import datetime as dt
 import backtrader as bt
+import getpass
+# Is Eric or Vincenzo using this script?
+
+username = getpass.getuser().lower()
 
 ###
 # Define Parameters here!
@@ -33,9 +37,9 @@ con.close()
 
 class StratVincenzo(bt.Strategy):
     def __init__(self):
-        self.atr = bt.ind.AverageTrueRange(period=14)
-        self.laguerre = bt.ind.LaguerreFilter(period=7, plot=False)
-        self.laguerreRSI = bt.ind.LaguerreRSI(period=7)
+        self.atr = bt.ind.AverageTrueRange()
+        self.laguerre = bt.ind.LaguerreFilter()
+        self.laguerreRSI = bt.ind.LaguerreRSI()
 
     def next(self):
         if not self.position:  # not in the market
@@ -58,7 +62,7 @@ class StratEric(bt.Strategy):
                 if self.laguerre < self.data:
                     self.buy(size=order_size)  # enter long
 
-        elif self.laguerreRSI < 0.5:  # in the market & cross to the downside
+        elif self.laguerreRSI < 0.:  # in the market & cross to the downside
             self.close()  # close long position
 
 
@@ -66,7 +70,6 @@ class StratEric(bt.Strategy):
 columns_to_keep = []
 for key, value in renaming.items():
     columns_to_keep.append(key)
-
 
 def fxcm_df_to_bt_df(df):
     df = df[columns_to_keep].copy()
@@ -79,8 +82,14 @@ def fxcm_df_to_bt_df(df):
 # Initialize Cerebro:
 cerebro = bt.Cerebro()
 
-# Add strategy to cerebro
-cerebro.addstrategy(Strat1)
+# Add strategy to cerebro. To avoid merge errors, it detectes which strategy to apply
+if username.find('vinc') >= 0:
+    cerebro.addstrategy(StratVincenzo)
+    print('High IQ detected')
+
+elif username.find('eric') >= 0:
+    cerebro.addstrategy(StratEric)
+    print('Applying strategy for IQ < 80')
 
 # Transform data
 dataframe = fxcm_df_to_bt_df(data)
