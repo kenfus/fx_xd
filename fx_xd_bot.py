@@ -1,7 +1,6 @@
 import fxcmpy
 import datetime as dt
 import backtrader as bt
-import plotly
 
 #
 ###
