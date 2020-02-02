@@ -33,9 +33,9 @@ con.close()
 
 class Strat1(bt.Strategy):
     def __init__(self):
-        self.atr = bt.ind.AverageTrueRange(period=14)
-        self.laguerre = bt.ind.LaguerreFilter(period=7, plot=False)
-        self.laguerreRSI = bt.ind.LaguerreRSI(period=7)
+        self.atr = bt.ind.AverageTrueRange()
+        self.laguerre = bt.ind.LaguerreFilter()
+        self.laguerreRSI = bt.ind.LaguerreRSI()
 
     def next(self):
         if not self.position:  # not in the market
@@ -53,7 +53,7 @@ for key, value in renaming.items():
     columns_to_keep.append(key)
 
 
-def fxcm_df_to_bt_df(df, renaming):
+def fxcm_df_to_bt_df(df):
     df = df[columns_to_keep].copy()
     df.rename(columns=renaming, inplace=True)
     return df
