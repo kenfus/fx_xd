@@ -31,7 +31,22 @@ con.close()
 
 ### Define Indicators and signals
 
-class Strat1(bt.Strategy):
+class StratVincenzo(bt.Strategy):
+    def __init__(self):
+        self.atr = bt.ind.AverageTrueRange(period=14)
+        self.laguerre = bt.ind.LaguerreFilter(period=7, plot=False)
+        self.laguerreRSI = bt.ind.LaguerreRSI(period=7)
+
+    def next(self):
+        if not self.position:  # not in the market
+            if self.laguerreRSI > 0.85:
+                if self.laguerre < self.data:
+                    self.buy(size=order_size)  # enter long
+
+        elif self.laguerreRSI < 0.5:  # in the market & cross to the downside
+            self.close()  # close long position
+
+class StratEric(bt.Strategy):
     def __init__(self):
         self.atr = bt.ind.AverageTrueRange(period=14)
         self.laguerre = bt.ind.LaguerreFilter(period=7, plot=False)
