@@ -87,15 +87,8 @@ def fxcm_df_to_bt_df(df):
     df.rename(columns=renaming, inplace=True)
     return df
 
-
-###
-
 # Initialize Cerebro:
 cerebro = bt.Cerebro()
-
-
-# Add strategy to cerebro
-cerebro.addstrategy(StratEric)
 
 # Add strategy to cerebro. To avoid merge errors, it detectes which strategy to apply
 if username.find('vinc') >= 0:
@@ -108,7 +101,7 @@ elif username.find('eric') >= 0:
 
 
 # Transform data
-dataframe = fxcm_df_to_bt_df(data, renaming)
+dataframe = fxcm_df_to_bt_df(data)
 
 # Transform and feed data to backtrader and set parameters for the broker
 data_to_backtest = bt.feeds.PandasData(dataname=dataframe, timeframe=timeframe, openinterest=None)
