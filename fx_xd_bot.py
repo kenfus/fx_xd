@@ -5,6 +5,7 @@ import matplotlib
 matplotlib.use('TKAgg')
 import matplotlib.pyplot as plt
 
+
 #
 ###
 #Define Parameters here!
@@ -86,7 +87,7 @@ def fxcm_df_to_bt_df(df, start_dt, stop_dt, token_to_trade, time_frame, renaming
     df.rename(columns = renaming, inplace = True)
     return df
 ###
-    
+
 # Initialize Cerebro:
 cerebro = bt.Cerebro()
 
@@ -107,7 +108,7 @@ cerebro.broker.setcash(cash_amount)
 cerebro.broker.setcommission(commission=0.001)
 # Startingvalue
 starting_value = cerebro.broker.getvalue()
-print('Starting Portfolio Value: %.2f' % starting_value)
+print('Starting Portfolio Value: {}'.format(starting_value))
 
 # Gogo gadget cerebro
 cerebro.run()
@@ -115,7 +116,7 @@ cerebro.run()
 # Value after applying strategy
 end_value = cerebro.broker.getvalue()
 end_value_leverage = starting_value + (end_value - starting_value) * leverage
-print('Final Portfolio Value: %.2f' % end_value_leverage)
+print('Final Portfolio Value: {}'.format(end_value_leverage))
 
 # Plot the results
 cerebro.plot(openinterest = None, volume = None)
