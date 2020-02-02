@@ -49,7 +49,7 @@ class StratVincenzo(bt.Strategy):
 class StratEric(bt.Strategy):
     def __init__(self):
         self.atr = bt.ind.AverageTrueRange(period=14)
-        self.laguerre = bt.ind.LaguerreFilter(period=7, plot=False)
+        self.laguerre = bt.ind.LaguerreFilter(period=7)
         self.laguerreRSI = bt.ind.LaguerreRSI(period=7)
 
     def next(self):
@@ -58,10 +58,17 @@ class StratEric(bt.Strategy):
                 if self.laguerre < self.data:
                     self.buy(size=order_size)  # enter long
 
-        elif self.laguerreRSI < 0.5:  # in the market & cross to the downside
-            self.close()  # close long position
+        elif self.position:
+                if self.laguerreRSI < 0.5:  # in the market & cross to the downside
+                    self.close()  # close long position
 
-
+        elif not self.position:  # not in the market
+            if self.laguerreRSI < 0.4:
+                if self.laguerre > self.data:
+                    self.sell(size=order_size)  # enter short
+        elif self.position:
+            if self.laguerreRSI > 0.5:  # in the market & cross to the downside
+                self.close()  # close long position
 ### Helper Functions
 columns_to_keep = []
 for key, value in renaming.items():
@@ -80,10 +87,10 @@ def fxcm_df_to_bt_df(df, renaming):
 cerebro = bt.Cerebro()
 
 # Add strategy to cerebro
-cerebro.addstrategy(Strat1)
+cerebro.addstrategy(StratEric)
 
 # Transform data
-dataframe = fxcm_df_to_bt_df(data)
+dataframe = fxcm_df_to_bt_df(data, renaming)
 
 # Transform and feed data to backtrader and set parameters for the broker
 data_to_backtest = bt.feeds.PandasData(dataname=dataframe, timeframe=timeframe, openinterest=None)
