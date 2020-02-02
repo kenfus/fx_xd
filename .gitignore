@@ -131,3 +131,4 @@ dmypy.json
 # Fxcm files
 fxcm_log
 fxcm.cfg
+simple_candlestick.html
