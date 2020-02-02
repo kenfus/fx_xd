@@ -52,9 +52,10 @@ class StratVincenzo(bt.Strategy):
 
 class StratEric(bt.Strategy):
     def __init__(self):
-        self.atr = bt.ind.AverageTrueRange()
-        self.laguerre = bt.ind.LaguerreFilter()
-        self.laguerreRSI = bt.ind.LaguerreRSI()
+
+        self.atr = bt.ind.AverageTrueRange(period=14)
+        self.laguerre = bt.ind.LaguerreFilter(period=7)
+        self.laguerreRSI = bt.ind.LaguerreRSI(period=7)
 
     def next(self):
         if not self.position:  # not in the market
@@ -62,8 +63,18 @@ class StratEric(bt.Strategy):
                 if self.laguerre < self.data:
                     self.buy(size=order_size)  # enter long
 
-        elif self.laguerreRSI < 0.:  # in the market & cross to the downside
-            self.close()  # close long position
+        elif self.position:
+                if self.laguerreRSI < 0.5:  # in the market & cross to the downside
+                    self.close()  # close long position
+
+        elif not self.position:  # not in the market
+            if self.laguerreRSI < 0.4:
+                if self.laguerre > self.data:
+                    self.sell(size=order_size)  # enter short
+        elif self.position:
+            if self.laguerreRSI > 0.5:  # in the market & cross to the downside
+                self.close()  # close short position
+
 
 
 ### Helper Functions
@@ -82,6 +93,10 @@ def fxcm_df_to_bt_df(df):
 # Initialize Cerebro:
 cerebro = bt.Cerebro()
 
+
+# Add strategy to cerebro
+cerebro.addstrategy(StratEric)
+
 # Add strategy to cerebro. To avoid merge errors, it detectes which strategy to apply
 if username.find('vinc') >= 0:
     cerebro.addstrategy(StratVincenzo)
@@ -91,8 +106,9 @@ elif username.find('eric') >= 0:
     cerebro.addstrategy(StratEric)
     print('Applying strategy for IQ < 80')
 
+
 # Transform data
-dataframe = fxcm_df_to_bt_df(data)
+dataframe = fxcm_df_to_bt_df(data, renaming)
 
 # Transform and feed data to backtrader and set parameters for the broker
 data_to_backtest = bt.feeds.PandasData(dataname=dataframe, timeframe=timeframe, openinterest=None)
