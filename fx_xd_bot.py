@@ -27,7 +27,8 @@ commission = 0.001
 # Create File-Name for Forex-Data
 path_to_data_folder = 'data/'
 token_to_trade_no_slash = token_to_trade.replace('/', '')
-file_name = token_to_trade_no_slash + '_' + time_frame + '_' + start_dt.strftime("%Y%m%d") + '_to_' + stop_dt.strftime("%Y%m%d")
+file_name = token_to_trade_no_slash + '_' + time_frame + '_' + start_dt.strftime("%Y%m%d") + '_to_' + stop_dt.strftime(
+    "%Y%m%d")
 path_to_data = 'data/' + file_name + '.csv'
 ###
 
@@ -37,6 +38,7 @@ if os.path.isfile(path_to_data):
     # Converting the index as date
     data.index = pd.to_datetime(data.index)
 else:
+    # Connect to fxcm server and get data and save the data locally.
     con = fxcmpy.fxcmpy(config_file=config_file_path, server=server_type)
     instruments = con.get_instruments()
     data = con.get_candles(token_to_trade, period=time_frame, start=start_dt, stop=stop_dt)
@@ -44,18 +46,17 @@ else:
     data.to_csv(path_to_data)
 
 
-###
-
 ### Define Indicators and signals
 
 class StratVincenzo(bt.Strategy):
-
     params = (('threshold_long', None),
+              ('threshold_short', None),
               ('period', 12),)
 
     def __init__(self):
         self.startcash = self.broker.getvalue()
         self.threshold_long = self.params.threshold_long
+        self.threshold_short = self.params.threshold_short
         self.kama = bt.ind.MovingAverageSimple(self.datas[0], period=self.params.period)
         self.laguerreRSI = bt.ind.LaguerreRSI()
 
@@ -64,13 +65,13 @@ class StratVincenzo(bt.Strategy):
             if self.laguerreRSI[0] > self.threshold_long:
                 if self.kama[0] < self.data.close[0]:
                     self.buy(size=order_size)  # enter long
-        elif self.laguerreRSI[0] < 0.5:  # in the market & cross to the downside
+        elif self.laguerreRSI[0] < self.threshold_short:  # in the market & cross to the downside
             self.close()  # close long position
 
-    def stop(self):
-        pnl = round(self.broker.getvalue() - self.startcash, 2)
-        print('Laguerre Filter Period: {}, lRSI-threshold: {}. Final PnL: {}'.format(
-            self.params.period, self.params.threshold_long, pnl))
+    # def stop(self):
+    #     pnl = round(self.broker.getvalue() - self.startcash, 2)
+    #     print('Laguerre Filter Period: {}, lRSI-threshold: {}. Final PnL: {}'.format(
+    #         self.params.period, self.params.threshold_long, pnl))
 
 
 class StratEric(bt.Strategy):
@@ -116,7 +117,8 @@ cerebro = bt.Cerebro(optreturn=False)
 # Add strategy to cerebro. To avoid merge errors, it detects which strategy to apply
 if username.find('vinc') >= 0:
     # cerebro.addstrategy(StratVincenzo, long_threshold=0.85)
-    cerebro.optstrategy(StratVincenzo, period=range(3, 18), threshold_long=0.1)
+    cerebro.optstrategy(StratVincenzo, period=range(3, 18), threshold_long=np.arange(0.3, 0.8, 0.05),
+                        threshold_short=np.arange(0.1, 0.6, 0.05))
     print('High IQ detected')
 
 elif username.find('eric') >= 0:
@@ -144,11 +146,13 @@ for run in opt_runs:
         PnL = round(value - startcash, 5)
         period = strategy.params.period
         threshold_long = strategy.params.threshold_long
-        final_results_list.append([period, threshold_long, PnL])
+        threshold_short = strategy.params.threshold_short
+        final_results_list.append([period, threshold_long, threshold_short, PnL])
 
-by_PnL = sorted(final_results_list, key=lambda x: x[2])
+by_PnL = sorted(final_results_list, key=lambda x: x[3])
 
 # Print results
 print('Results: Ordered by Profit:')
-for result in by_PnL:
-    print('Laguerre Filter Period: {}, lRSI-threshold: {}. Final PnL: {}'.format(result[0], result[1], result[2]))
+for result in by_PnL[:5]:
+    print('Kama Period: {}, lRSI-threshold long: {}. lRSI-threshold short: {}, Final PnL: {}'.format(result[0], result[1],
+                                                                                                result[2], result[3]))
