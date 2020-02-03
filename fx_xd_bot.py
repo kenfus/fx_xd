@@ -37,7 +37,7 @@ con.close()
 ### Define Indicators and signals
 
 class StratVincenzo(bt.Strategy):
-    params = (('threshold_long', None), ('d1', None), ('period', 9),)
+    params = (('threshold_long', None),  ('period', 9),)
     
     def __init__(self):
         self.startcash = self.broker.getvalue()
