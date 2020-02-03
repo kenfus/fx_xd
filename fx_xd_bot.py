@@ -116,7 +116,7 @@ cerebro = bt.Cerebro(optreturn=False)
 # Add strategy to cerebro. To avoid merge errors, it detects which strategy to apply
 if username.find('vinc') >= 0:
     # cerebro.addstrategy(StratVincenzo, long_threshold=0.85)
-    cerebro.optstrategy(StratVincenzo, period=range(7, 20), threshold_long=0.5)
+    cerebro.optstrategy(StratVincenzo, period=range(3, 18), threshold_long=0.1)
     print('High IQ detected')
 
 elif username.find('eric') >= 0:
