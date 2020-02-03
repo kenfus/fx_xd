@@ -49,6 +49,7 @@ else:
 ### Define Indicators and signals
 
 class StratVincenzo(bt.Strategy):
+
     params = (('threshold_long', None),
               ('period', 12),)
 
