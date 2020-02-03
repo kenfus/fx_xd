@@ -11,7 +11,7 @@ username = getpass.getuser().lower()
 # Define Parameters here!
 token_to_trade = 'GBP/CHF'
 time_frame = 'D1'
-start_dt = dt.datetime(2019, 1, 1)
+start_dt = dt.datetime(2019, 7, 1)
 stop_dt = dt.datetime(2019, 12, 31)
 server_type = 'demo'  # server = 'real' for live
 config_file_path = 'fxcm.cfg'
@@ -63,9 +63,10 @@ class StratVincenzo(bt.Strategy):
 
 class StratEric(bt.Strategy):
     def __init__(self):
-        self.atr = bt.ind.AverageTrueRange(period=14)
-        self.laguerre = bt.ind.LaguerreFilter(period=7)
-        self.laguerreRSI = bt.ind.LaguerreRSI(period=7)
+        self.atr = bt.ind.AverageTrueRange()
+        self.laguerre = bt.ind.LaguerreFilter()
+        self.laguerreRSI = bt.ind.LaguerreRSI()
+        self.accdescos = bt.ind.AccelerationDecelerationOscillator()
 
     def next(self):
         if not self.position:  # not in the market
@@ -78,11 +79,10 @@ class StratEric(bt.Strategy):
                 self.close()  # close long position
 
         elif not self.position:  # not in the market
-            if self.laguerreRSI < 0.4:
-                if self.laguerre > self.data:
-                    self.sell(size=order_size)  # enter short
+            if self.laguerre < self.data:
+                self.sell(size=order_size)  # enter short
         elif self.position:
-            if self.laguerreRSI > 0.5:  # in the market & cross to the downside
+            if self.laguerre > self.data:  # in the market & cross to the downside
                 self.close()  # close short position
 
 
@@ -131,6 +131,7 @@ cerebro.broker.setcommission(commission=commission)
 cerebro.run()
 
 # Value after applying strategy
+
 # end_value = cerebro.broker.getvalue()
 # end_value_leverage = starting_value + (end_value - starting_value) * leverage
 # print('Final Portfolio Value: {}'.format(end_value_leverage))
