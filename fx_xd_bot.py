@@ -82,6 +82,7 @@ class StratEric(bt.Strategy):
         self.laguerre = bt.ind.LaguerreFilter()
         self.laguerreRSI = bt.ind.LaguerreRSI()
         self.accdescos = bt.ind.AccelerationDecelerationOscillator()
+        self.entry_price = None
 
     def next(self):
         # long entry
@@ -89,13 +90,13 @@ class StratEric(bt.Strategy):
             if self.laguerreRSI > 0.0:
                 if self.laguerre < self.data:
                     self.buy(size=order_size)  # enter long
-                    entry_price = self.data
+                    self.entry_price = self.data
 
         # short entry
         elif not self.position:  # not in the market
             if self.laguerre < self.data:
                 self.sell(size=order_size)  # enter short
-                entry_price = self.data
+                self.entry_price = self.data
 
         # money management
         stop_atr = 1.5 * self.atr
@@ -166,7 +167,10 @@ cerebro.broker.setcommission(commission=commission)
 # Run over everything
 opt_runs = cerebro.run()
 final_results_list = []
+
+# run in opt_run
 for run in opt_runs:
+    print(run)
     for strategy in run:
         value = round(strategy.broker.get_value(), 2)
         PnL = round(value - startcash, 2)
@@ -184,3 +188,4 @@ for result in by_PnL[:5]:
     print(
         'Kama Period: {}, lRSI-threshold long: {}. lRSI-threshold short: {}, '
         'Final PnL: {}, Final PnL-%: {}'.format(result[0], result[1], result[2], result[3], result[4]))
+
