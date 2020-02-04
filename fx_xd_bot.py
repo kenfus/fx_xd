@@ -91,22 +91,11 @@ class StratEric(bt.Strategy):
                     self.buy(size=order_size)  # enter long
                     entry_price = self.data
 
-        # long exit
-        elif self.position:
-            if self.laguerreRSI < 0.5:  # in the market & cross to the downside
-                self.close()  # close long position
-                break_even = False
-
         # short entry
         elif not self.position:  # not in the market
             if self.laguerre < self.data:
                 self.sell(size=order_size)  # enter short
                 entry_price = self.data
-        # short exit
-        elif self.position:
-            if self.laguerre > self.data:  # in the market & cross to the downside
-                self.close()  # close short position
-                break_even = False
 
         # money management
         stop_atr = 1.5 * self.atr
@@ -123,7 +112,17 @@ class StratEric(bt.Strategy):
             elif self.data <= entry_price and break_even:
                 self.close()
 
+        # long exit
+        elif self.position:
+            if self.laguerreRSI < 0.5:  # in the market & cross to the downside
+                self.close()  # close long position
+                break_even = False
 
+        # short exit
+        elif self.position:
+            if self.laguerre > self.data:  # in the market & cross to the downside
+                self.close()  # close short position
+                break_even = False
 
 
 
@@ -146,7 +145,7 @@ def fxcm_df_to_bt_df(df):
 cerebro = bt.Cerebro(optreturn=False)
 
 # Add strategy to cerebro. To avoid merge errors, it detects which strategy to apply
-if username.find('eric') >= 0:
+if username.find('vinc') >= 0:
     # cerebro.addstrategy(StratVincenzo, long_threshold=0.85)
     cerebro.optstrategy(StratVincenzo, period=range(3, 18), threshold_long=np.arange(0.3, 0.8, 0.05),
                         threshold_short=np.arange(0.1, 0.6, 0.05))
