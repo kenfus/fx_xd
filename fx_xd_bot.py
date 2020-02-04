@@ -124,12 +124,6 @@ class StratEric(bt.Strategy):
                 self.close()
 
 
-
-
-
-
-
-
 ### Helper Functions
 columns_to_keep = []
 for key, value in renaming.items():
@@ -146,7 +140,7 @@ def fxcm_df_to_bt_df(df):
 cerebro = bt.Cerebro(optreturn=False)
 
 # Add strategy to cerebro. To avoid merge errors, it detects which strategy to apply
-if username.find('eric') >= 0:
+if username.find('vinc') >= 0:
     # cerebro.addstrategy(StratVincenzo, long_threshold=0.85)
     cerebro.optstrategy(StratVincenzo, period=range(3, 18), threshold_long=np.arange(0.2, 0.8, 0.05),
                         threshold_short=np.arange(0.1, 0.7, 0.05))
