@@ -13,8 +13,8 @@ username = getpass.getuser().lower()
 # Define Parameters here!
 token_to_trade = 'GBP/CHF'
 time_frame = 'D1'
-start_dt = dt.datetime(2019, 7, 1)
-stop_dt = dt.datetime(2019, 12, 31)
+start_dt = dt.datetime(2017, 7, 1)
+stop_dt = dt.datetime(2020, 2, 3)
 server_type = 'demo'  # server = 'real' for live
 config_file_path = 'fxcm.cfg'
 # Define the renaming and which columns to use for this test. Careful, the columns which are not defined or renamed here will be dropped!
@@ -125,10 +125,6 @@ class StratEric(bt.Strategy):
                 break_even = False
 
 
-
-
-
-
 ### Helper Functions
 columns_to_keep = []
 for key, value in renaming.items():
@@ -147,8 +143,8 @@ cerebro = bt.Cerebro(optreturn=False)
 # Add strategy to cerebro. To avoid merge errors, it detects which strategy to apply
 if username.find('vinc') >= 0:
     # cerebro.addstrategy(StratVincenzo, long_threshold=0.85)
-    cerebro.optstrategy(StratVincenzo, period=range(3, 18), threshold_long=np.arange(0.3, 0.8, 0.05),
-                        threshold_short=np.arange(0.1, 0.6, 0.05))
+    cerebro.optstrategy(StratVincenzo, period=range(3, 18), threshold_long=np.arange(0.2, 0.8, 0.05),
+                        threshold_short=np.arange(0.1, 0.7, 0.05))
     print('High IQ detected')
 
 elif username.find('eric') >= 0:
@@ -172,17 +168,19 @@ opt_runs = cerebro.run()
 final_results_list = []
 for run in opt_runs:
     for strategy in run:
-        value = round(strategy.broker.get_value(), 5)
-        PnL = round(value - startcash, 5)
+        value = round(strategy.broker.get_value(), 2)
+        PnL = round(value - startcash, 2)
+        percent_PnL = round(PnL/order_size*100, 2)
         period = strategy.params.period
-        threshold_long = strategy.params.threshold_long
-        threshold_short = strategy.params.threshold_short
-        final_results_list.append([period, threshold_long, threshold_short, PnL])
+        threshold_long = round(strategy.params.threshold_long, 2)
+        threshold_short = round(strategy.params.threshold_short, 2)
+        final_results_list.append([period, threshold_long, threshold_short, PnL, percent_PnL])
 
-by_PnL = sorted(final_results_list, key=lambda x: x[3])
+by_PnL = sorted(final_results_list, key=lambda x: x[3], reverse=True)
 
 # Print results
 print('Results: Ordered by Profit:')
 for result in by_PnL[:5]:
-    print('Kama Period: {}, lRSI-threshold long: {}. lRSI-threshold short: {}, Final PnL: {}'.format(result[0], result[1],
-                                                                                                result[2], result[3]))
+    print(
+        'Kama Period: {}, lRSI-threshold long: {}. lRSI-threshold short: {}, '
+        'Final PnL: {}, Final PnL-%: {}'.format(result[0], result[1], result[2], result[3], result[4]))
