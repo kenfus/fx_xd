@@ -158,6 +158,7 @@ elif username.find('eric') >= 0:
 
 # Transform data
 dataframe = fxcm_df_to_bt_df(data)
+
 # Transform and feed data to backtrader and set parameters for the broker
 data_to_backtest = bt.feeds.PandasData(dataname=dataframe, timeframe=timeframe, openinterest=None)
 cerebro.adddata(data_to_backtest)
@@ -171,7 +172,10 @@ cerebro.broker.setcommission(commission=commission)
 # Run over everything
 opt_runs = cerebro.run()
 final_results_list = []
+
+# run in opt_run
 for run in opt_runs:
+    print(run)
     for strategy in run:
         value = round(strategy.broker.get_value(), 2)
         PnL = round(value - startcash, 2)
@@ -189,3 +193,4 @@ for result in by_PnL[:5]:
     print(
         'Kama Period: {}, lRSI-threshold long: {}. lRSI-threshold short: {}, '
         'Final PnL: {}, Final PnL-%: {}'.format(result[0], result[1], result[2], result[3], result[4]))
+
