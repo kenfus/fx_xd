@@ -20,7 +20,7 @@ renaming = {'bidopen': 'open', 'bidclose': 'close', 'bidhigh': 'high', 'bidlow':
 timeframe = bt.TimeFrame.Days
 startcash = 10000
 leverage = 50
-order_size = 0.2 * startcash
+# order_size = 0.2 * startcash
 commission = 0.001
 atr_stop_loss = 1.5
 atr_take_profit_1 = 2 * atr_stop_loss
@@ -74,6 +74,9 @@ class StratEric(bt.Strategy):
         self.is_short = False
 
     def next(self):
+        # use percentage of current cash amount for trading
+        order_size = 0.2 * self.broker.getvalue()
+        self.current_price = self.data[0]
         # long entry
         if not self.position and not self.is_long and not self.is_short:  # not in the market
             if self.rmi > 50:# and self.accdescos > 0:
