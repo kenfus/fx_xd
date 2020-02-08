@@ -1,10 +1,11 @@
-import fxcmpy
 import datetime as dt
-import backtrader as bt
 import getpass
+import os.path
+
+import backtrader as bt
+import fxcmpy
 import numpy as np
 import pandas as pd
-import os.path
 
 # Is Eric or Vincenzo using this script?
 username = getpass.getuser().lower()
@@ -46,6 +47,34 @@ else:
     data.to_csv(path_to_data)
 
 
+### Function which creates a class
+class trading_strategy(bt.Strategy):
+    params = (('threshold_long', 0.5),
+              ('threshold_short', 0.5),
+              ('period', 12),
+              ('entry_ind', 'SMA'),
+              ('conf_ind', 'SMA'),
+              ('exit_ind', 'SMA'),
+              ('baseline_ind', 'SMA'),
+              )
+
+    def __init__(self):
+        self.startcash = self.broker.getvalue()
+        self.threshold_long = self.params.threshold_long
+        self.threshold_short = self.params.threshold_short
+        self.baseline = getattr(bt.ind, self.params.baseline_ind)(period=self.params.period)
+        self.conf_ind = getattr(bt.ind, self.params.conf_ind)(period=self.params.period)
+        self.exit_ind = getattr(bt.ind, self.params.entry_ind)(period=self.params.period)
+
+    def next(self):
+        if not self.position:  # not in the market
+            if self.conf_ind < self.data.close:
+                if self.baseline < self.data.close:
+                    self.buy(size=order_size)  # enter long
+        elif self.exit_ind > self.data.close:  # in the market & cross to the downside
+            self.close()  # close long position
+
+
 ### Define Indicators and signals
 
 class StratVincenzo(bt.Strategy):
@@ -57,22 +86,16 @@ class StratVincenzo(bt.Strategy):
         self.startcash = self.broker.getvalue()
         self.threshold_long = self.params.threshold_long
         self.threshold_short = self.params.threshold_short
-        self.kama = bt.ind.MovingAverageSimple(self.datas[0], period=self.params.period)
         self.laguerreRSI = bt.ind.LaguerreRSI()
-        self.atr = bt.ind.AverageTrueRange(period = 14)
+        self.atr = bt.ind.AverageTrueRange(period=14)
 
     def next(self):
         if not self.position:  # not in the market
             if self.laguerreRSI[0] > self.threshold_long:
-                if self.kama[0] < self.data.close[0]:
+                if self.kama < self.data.close:
                     self.buy(size=order_size)  # enter long
         elif self.laguerreRSI[0] < self.threshold_short:  # in the market & cross to the downside
             self.close()  # close long position
-
-    # def stop(self):
-    #     pnl = round(self.broker.getvalue() - self.startcash, 2)
-    #     print('Laguerre Filter Period: {}, lRSI-threshold: {}. Final PnL: {}'.format(
-    #         self.params.period, self.params.threshold_long, pnl))
 
 
 class StratEric(bt.Strategy):
@@ -148,8 +171,9 @@ cerebro = bt.Cerebro(optreturn=False)
 # Add strategy to cerebro. To avoid merge errors, it detects which strategy to apply
 if username.find('vinc') >= 0:
     # cerebro.addstrategy(StratVincenzo, long_threshold=0.85)
-    cerebro.optstrategy(StratVincenzo, period=range(3, 18), threshold_long=np.arange(0.2, 0.8, 0.05),
-                        threshold_short=np.arange(0.1, 0.7, 0.05))
+    cerebro.optstrategy(trading_strategy, period=range(3, 7), threshold_long=0.1,
+                        threshold_short=0.2, exit_ind=['SMA', 'EMA'], entry_ind=['SMA', 'EMA'],
+                        conf_ind=['SMA', 'EMA'], baseline_ind=['SMA', 'EMA'])
     print('High IQ detected')
 
 elif username.find('eric') >= 0:
@@ -175,22 +199,30 @@ final_results_list = []
 
 # run in opt_run
 for run in opt_runs:
-    print(run)
     for strategy in run:
         value = round(strategy.broker.get_value(), 2)
         PnL = round(value - startcash, 2)
-        percent_PnL = round(PnL/order_size*100, 2)
+        percent_PnL = round(PnL / order_size * 100, 2)
         period = strategy.params.period
         threshold_long = round(strategy.params.threshold_long, 2)
         threshold_short = round(strategy.params.threshold_short, 2)
-        final_results_list.append([period, threshold_long, threshold_short, PnL, percent_PnL])
+        exit_ind = strategy.params.exit_ind
+        entry_ind = strategy.params.entry_ind
+        conf_ind = strategy.params.conf_ind
+        baseline_ind = strategy.params.baseline_ind
+        final_results_list.append(
+            [period, threshold_long, threshold_short, PnL, percent_PnL, exit_ind, entry_ind, conf_ind, baseline_ind])
 
 by_PnL = sorted(final_results_list, key=lambda x: x[3], reverse=True)
 
 # Print results
 print('Results: Ordered by Profit:')
-for result in by_PnL[:5]:
+for result in by_PnL[:30]:
     print(
-        'Kama Period: {}, lRSI-threshold long: {}. lRSI-threshold short: {}, '
-        'Final PnL: {}, Final PnL-%: {}'.format(result[0], result[1], result[2], result[3], result[4]))
-
+        'MA Period: {}, lRSI-threshold long: {}. lRSI-threshold short: {}, '
+        'Final PnL: {}, Final PnL-%: {}, Exit Indicator: {}, Entry Indicator: {}, Confirmation indicator: {}, Baseline indicator: {}'.format(
+            result[0], result[1],
+            result[2], result[3],
+            result[4], result[5],
+            result[6], result[7],
+            result[8]))
