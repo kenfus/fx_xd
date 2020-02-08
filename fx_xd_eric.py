@@ -27,6 +27,7 @@ atr_take_profit_1 = 2 * atr_stop_loss
 atr_take_profit_2 = 4 * atr_stop_loss
 atr_take_profit_3 = 6 * atr_stop_loss
 aroon_period = 4
+percentage_to_trade = 0.2
 
 # Create File-Name for Forex-Data
 path_to_data_folder = 'data/'
@@ -62,8 +63,11 @@ class StratEric(bt.Strategy):
         self.aroon_up = bt.ind.AroonUp(period = aroon_period,plot = False)
         self.cross_over = bt.ind.CrossOver(self.data, self.laguerre, plot = False)
         self.cross_over_aroon = bt.ind.CrossOver(self.aroon_up, self.aroon_down, plot = False)
+        self.rsi = bt.ind.RelativeStrengthIndex()
+        self.rsi_long = bt.ind.CrossOver(self.rsi, 30,plot = False)
+        self.rsi_short = bt.ind.CrossOver(self.rsi, 70,plot = False)
         self.rmi = bt.ind.RelativeMomentumIndex(plot = False) # volume indicator
-        #self.aroon = bt.ind.AroonUpDown()
+        self.aroon = bt.ind.AroonUpDown()
 
         # define variables for money management
         self.break_even = False
@@ -75,12 +79,12 @@ class StratEric(bt.Strategy):
 
     def next(self):
         # use percentage of current cash amount for trading
-        order_size = 0.2 * self.broker.getvalue()
+        order_size = percentage_to_trade * self.broker.getvalue()
         self.current_price = self.data[0]
         # long entry
         if not self.position and not self.is_long and not self.is_short:  # not in the market
             if self.rmi > 50:# and self.accdescos > 0:
-                if self.cross_over == 1:
+                if self.cross_over == 1: #self.rsi_long == 1
                     self.buy(size=order_size)  # enter long
                     self.entry_price = self.data[0]
                     self.stop_atr_long = self.entry_price - atr_stop_loss * self.atr
@@ -92,7 +96,7 @@ class StratEric(bt.Strategy):
         # short entry
         if not self.position and not self.is_long and not self.is_short:  # not in the market
             if self.rmi > 50:# and self.accdescos > 0:
-                if self.cross_over == -1:
+                if self.cross_over == -1: #self.rsi_short: == -1
                     self.sell(size=order_size)  # enter short
                     self.entry_price = self.data[0]
                     self.stop_atr_short = self.entry_price + atr_stop_loss * self.atr
@@ -184,12 +188,15 @@ def fxcm_df_to_bt_df(df):
 
 
 # Initialize Cerebro:
-cerebro = bt.Cerebro(optreturn=False)
+cerebro = bt.Cerebro(optreturn=False,cheat_on_open=True)
 
 # Add strategy to cerebro. To avoid merge errors, it detects which strategy to apply
 
 
 cerebro.addstrategy(StratEric)
+
+#optimize strategy
+#cerebro.optstrategy(StratEric, aroon_period=range(2, 14))
 
 # Transform data
 dataframe = fxcm_df_to_bt_df(data)
@@ -214,4 +221,4 @@ print("Earnings with leverage: ", earnings)
 print("Per Month: ", earnings / 12)
 print("Per Week: ", earnings / 52)
 print("Per Day: ", earnings / 365)
-cerebro.plot() #style='candlestick', barup='green', bardown='red'
+cerebro.plot(style='candlestick', barup='green', bardown='red')
