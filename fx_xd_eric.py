@@ -106,7 +106,7 @@ class StratEric(bt.Strategy):
                     print("Stop loss short: ", self.stop_atr_short)
 
 
-        # long exit
+        '''# long exit
         if self.position.size > 0:
             if self.cross_over_aroon == 1:  # in the market & cross to the downside
                 self.close()  # close long position
@@ -120,7 +120,7 @@ class StratEric(bt.Strategy):
                 self.close()  # close short position
                 self.is_short = False
                 print("Exiting short")
-                print(self.data[0])
+                print(self.data[0])'''
 
         # define stop loss and take profit 1, 2 and 3
         #stop loss long
@@ -138,139 +138,42 @@ class StratEric(bt.Strategy):
                 print("Short stop loss hit", self.data[0])
 
         # take profit 1 long
-        if self.is_long and self.entry_price + atr_take_profit_1 and not self.take_profit_1:
+        if self.is_long and self.entry_price + atr_take_profit_1 * self.atr and not self.take_profit_1:
             self.sell(size=order_size / 4)
             self.take_profit_1 = True
-            self.stop_atr_long = self.data[0]
+            self.stop_atr_long = self.data[0] - self.atr
             print("Profit long 1")
         # take profit 2 long
-        if self.is_long and self.entry_price + atr_take_profit_2 and not self.take_profit_1 and not self.take_profit_2:
+        if self.is_long and self.entry_price + atr_take_profit_2 * self.atr and not self.take_profit_1 and not self.take_profit_2:
             self.sell(size=order_size / 4)
             self.take_profit_2 = True
-            self.stop_atr_long = self.data[0]
+            self.stop_atr_long = self.data[0] - self.atr
             print("Profit long 2")
         # take profit 3 long
-        if self.is_long and self.entry_price + atr_take_profit_3 and not self.take_profit_1 and not self.take_profit_2 and not self.take_profit_3:
+        if self.is_long and self.entry_price + atr_take_profit_3 * self.atr and not self.take_profit_1 and not self.take_profit_2 and not self.take_profit_3:
             self.sell(size=order_size / 4)
             self.take_profit_3 = True
-            self.stop_atr_long = self.data[0]
+            self.stop_atr_long = self.data[0] - self.atr
             print("Profit long 3")
 
         # take profit 1 short
-        if self.is_short and self.entry_price - atr_take_profit_1 and not self.take_profit_1:
+        if self.is_short and self.entry_price - atr_take_profit_1 * self.atr and not self.take_profit_1:
             self.sell(size=order_size / 4)
             self.take_profit_1 = True
-            self.stop_atr_short = self.data[0]
+            self.stop_atr_short = self.data[0] + self.atr
             print("Profit short 1")
         # take profit 2 short
-        if self.is_short and self.entry_price - atr_take_profit_2 and not self.take_profit_1 and not self.take_profit_2:
+        if self.is_short and self.entry_price - atr_take_profit_2 * self.atr and not self.take_profit_1 and not self.take_profit_2:
             self.sell(size=order_size / 4)
             self.take_profit_1 = True
-            self.stop_atr_short = self.data[0]
+            self.stop_atr_short = self.data[0] + self.atr
             print("Profit short 2")
         # take profit 3 short
-        if self.is_short and self.entry_price - atr_take_profit_3 and not self.take_profit_1 and not self.take_profit_2 and not self.take_profit_3:
+        if self.is_short and self.entry_price - atr_take_profit_3 * self.atr and not self.take_profit_1 and not self.take_profit_2 and not self.take_profit_3:
             self.sell(size=order_size / 4)
             self.take_profit_1 = True
-            self.stop_atr_short = self.data[0]
+            self.stop_atr_short = self.data[0] + self.atr
             print("Profit short 3")
-
-            def next(self):
-                # use percentage of current cash amount for trading
-                order_size = percentage_to_trade * self.broker.getvalue()
-                self.current_price = self.data[0]
-                # long entry
-                if not self.position and not self.is_long and not self.is_short:  # not in the market
-                    if self.rmi > 50:  # and self.accdescos > 0:
-                        if self.cross_over == 1:  # self.rsi_long == 1
-                            self.buy(size=order_size)  # enter long
-                            self.entry_price = self.data[0]
-                            self.stop_atr_long = self.entry_price - atr_stop_loss * self.atr
-                            self.is_long = True
-                            print("Entering long")
-                            print(self.data[0])
-                            print("Stop loss long: ", self.stop_atr_long)
-
-                # short entry
-                if not self.position and not self.is_long and not self.is_short:  # not in the market
-                    if self.rmi > 50:  # and self.accdescos > 0:
-                        if self.cross_over == -1:  # self.rsi_short: == -1
-                            self.sell(size=order_size)  # enter short
-                            self.entry_price = self.data[0]
-                            self.stop_atr_short = self.entry_price + atr_stop_loss * self.atr
-                            self.is_short = True
-                            print("Entering short")
-                            print(self.data[0])
-                            print("Stop loss short: ", self.stop_atr_short)
-
-                # long exit
-                if self.position.size > 0:
-                    if self.cross_over_aroon == 1:  # in the market & cross to the downside
-                        self.close()  # close long position
-                        self.is_long = False
-                        print("Exiting long")
-                        print(self.data[0])
-
-                # short exit
-                if self.position.size < 0:
-                    if self.cross_over_aroon == -1:  # in the market & cross to the upside
-                        self.close()  # close short position
-                        self.is_short = False
-                        print("Exiting short")
-                        print(self.data[0])
-
-                # define stop loss and take profit 1, 2 and 3
-                # stop loss long
-                if self.is_long:
-                    if self.data <= self.stop_atr_long:
-                        self.close()
-                        self.is_long = False
-                        print("Long stop loss hit", self.data[0])
-
-                # stop loss short
-                if self.is_short:
-                    if self.data >= self.stop_atr_short:
-                        self.close()
-                        self.is_short = False
-                        print("Short stop loss hit", self.data[0])
-
-                # take profit 1 long
-                if self.is_long and self.entry_price + atr_take_profit_1 and not self.take_profit_1:
-                    self.sell(size=order_size / 4)
-                    self.take_profit_1 = True
-                    self.stop_atr_long = self.data[0]
-                    print("Profit long 1")
-                # take profit 2 long
-                if self.is_long and self.entry_price + atr_take_profit_2 and not self.take_profit_1 and not self.take_profit_2:
-                    self.sell(size=order_size / 4)
-                    self.take_profit_2 = True
-                    self.stop_atr_long = self.data[0]
-                    print("Profit long 2")
-                # take profit 3 long
-                if self.is_long and self.entry_price + atr_take_profit_3 and not self.take_profit_1 and not self.take_profit_2 and not self.take_profit_3:
-                    self.sell(size=order_size / 4)
-                    self.take_profit_3 = True
-                    self.stop_atr_long = self.data[0]
-                    print("Profit long 3")
-
-                # take profit 1 short
-                if self.is_short and self.entry_price - atr_take_profit_1 and not self.take_profit_1:
-                    self.sell(size=order_size / 4)
-                    self.take_profit_1 = True
-                    self.stop_atr_short = self.data[0]
-                    print("Profit short 1")
-                # take profit 2 short
-                if self.is_short and self.entry_price - atr_take_profit_2 and not self.take_profit_1 and not self.take_profit_2:
-                    self.sell(size=order_size / 4)
-                    self.take_profit_1 = True
-                    self.stop_atr_short = self.data[0]
-                    print("Profit short 2")
-                # take profit 3 short
-                if self.is_short and self.entry_price - atr_take_profit_3 and not self.take_profit_1 and not self.take_profit_2 and not self.take_profit_3:
-                    self.sell(size=order_size / 4)
-                    self.take_profit_1 = True
-                    self.stop_atr_short = self.data[0]
-                    print("Profit short 3")
 
 
 ### Helper Functions
