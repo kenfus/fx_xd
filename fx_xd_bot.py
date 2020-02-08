@@ -82,7 +82,11 @@ class StratEric(bt.Strategy):
         self.laguerre = bt.ind.LaguerreFilter()
         self.laguerreRSI = bt.ind.LaguerreRSI()
         self.accdescos = bt.ind.AccelerationDecelerationOscillator()
-        self.entry_price = None
+        self.aroon = bt.ind.AroonUpDown()
+
+        # define variables for money management
+        self.break_even = False
+        self.entry_price = self.data
 
     def next(self):
         # long entry
@@ -105,7 +109,7 @@ class StratEric(bt.Strategy):
         # define break even stop loss
         if self.position:
             if self.data >= entry_price + stop_atr:
-                break_even = True
+                self.break_even = True
 
             elif self.data <= entry_price - stop_atr and not break_even:
                 self.close()
@@ -117,13 +121,13 @@ class StratEric(bt.Strategy):
         elif self.position:
             if self.laguerreRSI < 0.5:  # in the market & cross to the downside
                 self.close()  # close long position
-                break_even = False
+                self.break_even = False
 
         # short exit
         elif self.position:
             if self.laguerre > self.data:  # in the market & cross to the downside
                 self.close()  # close short position
-                break_even = False
+                self.break_even = False
 
 
 ### Helper Functions
