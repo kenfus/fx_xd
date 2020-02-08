@@ -18,7 +18,7 @@ config_file_path = 'fxcm.cfg'
 # Define the renaming and which columns to use for this test. Careful, the columns which are not defined or renamed here will be dropped!
 renaming = {'bidopen': 'open', 'bidclose': 'close', 'bidhigh': 'high', 'bidlow': 'low', 'tickqty': 'volume'}
 timeframe = bt.TimeFrame.Days
-startcash = 10000
+startcash = 1000
 leverage = 50
 # order_size = 0.2 * startcash
 commission = 0.001
@@ -27,7 +27,7 @@ atr_take_profit_1 = 2 * atr_stop_loss
 atr_take_profit_2 = 4 * atr_stop_loss
 atr_take_profit_3 = 6 * atr_stop_loss
 aroon_period = 4
-percentage_to_trade = 0.2
+percentage_to_trade = 0.02
 
 # Create File-Name for Forex-Data
 path_to_data_folder = 'data/'
@@ -218,6 +218,7 @@ cerebro.run()
 earnings = (cerebro.broker.getvalue() - starting_cash) * leverage
 print("Cash after running: ", cerebro.broker.getvalue())
 print("Earnings with leverage: ", earnings)
+print("percent profit with leverage: ", round(earnings / starting_cash * 100, 2), "%")
 print("Per Month: ", earnings / 12)
 print("Per Week: ", earnings / 52)
 print("Per Day: ", earnings / 365)
