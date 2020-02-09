@@ -171,7 +171,7 @@ def fxcm_df_to_bt_df(df):
 
 if __name__ == '__main__':
     # Initialize Cerebro:
-    cerebro = bt.Cerebro(optreturn=False)
+    cerebro = bt.Cerebro()
 
     # Add strategy to cerebro. To avoid merge errors, it detects which strategy to apply
     if username.find('vinc') >= 0:
