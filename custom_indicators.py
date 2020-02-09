@@ -35,8 +35,6 @@ class schaff_trend_cycle(bt.Indicator):
               ('factor', 0.5),
               )
 
-    pf, f2 = 0.0, 0.0
-
     def __init__(self):
         self.m = bt.ind.MACDHisto(self.data.close, period_me1=self.p.fastLength, period_me2=self.p.slowLength)
         self.v1 = bt.ind.Lowest(self.m, period=self.p.length)
