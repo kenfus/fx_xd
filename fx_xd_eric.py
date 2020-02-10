@@ -9,7 +9,7 @@ import os.path
 
 ###
 # Define Parameters here!
-token_to_trade = 'AUD/NZD'
+token_to_trade = 'GBP/CHF' # 'AUD/NZD'
 time_frame = 'D1'
 start_dt = dt.datetime(2019, 1, 1)
 stop_dt = dt.datetime(2019, 12, 31)
@@ -18,14 +18,16 @@ config_file_path = 'fxcm.cfg'
 # Define the renaming and which columns to use for this test. Careful, the columns which are not defined or renamed here will be dropped!
 renaming = {'bidopen': 'open', 'bidclose': 'close', 'bidhigh': 'high', 'bidlow': 'low', 'tickqty': 'volume'}
 timeframe = bt.TimeFrame.Days
-startcash = 10000
+startcash = 1000
 leverage = 50
-order_size = 0.2 * startcash
+# order_size = 0.2 * startcash
 commission = 0.001
-atr_stop_loss = 1
-atr_take_profit_1 = atr_stop_loss + 0.3
-atr_take_profit_2 = atr_stop_loss + 0.6
-atr_take_profit_3 = atr_stop_loss + 0.9
+atr_stop_loss = 1.5
+atr_take_profit_1 = 2 * atr_stop_loss
+atr_take_profit_2 = 4 * atr_stop_loss
+atr_take_profit_3 = 6 * atr_stop_loss
+aroon_period = 4
+percentage_to_trade = 0.02
 
 # Create File-Name for Forex-Data
 path_to_data_folder = 'data/'
@@ -55,162 +57,123 @@ class StratEric(bt.Strategy):
         # Define indicators
         self.atr = bt.ind.AverageTrueRange(plot = False)
         self.laguerre = bt.ind.LaguerreFilter()
-        self.laguerreRSI = bt.ind.LaguerreRSI()
-        self.accdescos = bt.ind.AccelerationDecelerationOscillator()
-        self.aroon_down = bt.ind.AroonDown(plot = False)
-        self.aroon_up = bt.ind.AroonUp(plot = False)
+        self.laguerreRSI = bt.ind.LaguerreRSI(plot = False)
+        self.accdescos = bt.ind.AccelerationDecelerationOscillator(plot = False)
+        self.aroon_down = bt.ind.AroonDown(period = aroon_period,plot = False)
+        self.aroon_up = bt.ind.AroonUp(period = aroon_period,plot = False)
         self.cross_over = bt.ind.CrossOver(self.data, self.laguerre, plot = False)
         self.cross_over_aroon = bt.ind.CrossOver(self.aroon_up, self.aroon_down, plot = False)
-        self.rmi = bt.ind.RelativeMomentumIndex()
+        self.rsi = bt.ind.RelativeStrengthIndex()
+        self.rsi_long = bt.ind.CrossOver(self.rsi, 30,plot = False)
+        self.rsi_short = bt.ind.CrossOver(self.rsi, 70,plot = False)
+        self.rmi = bt.ind.RelativeMomentumIndex(plot = False) # volume indicator
         self.aroon = bt.ind.AroonUpDown()
 
         # define variables for money management
         self.break_even = False
-        self.tp_1 = False # Take Profit level 1
-        self.tp_2 = False  # Take Profit level 2
-        self.tp_3 = False  # Take Profit level 3
+        self.take_profit_1 = False # Take Profit level 1
+        self.take_profit_2 = False  # Take Profit level 2
+        self.take_profit_3 = False  # Take Profit level 3
         self.is_long = False
         self.is_short = False
-        #self.stop_atr = 1.5 * self.atr
 
     def next(self):
+        # use percentage of current cash amount for trading
+        order_size = percentage_to_trade * self.broker.getvalue()
+        self.current_price = self.data[0]
         # long entry
-        if not self.position:  # not in the market
+        if not self.position and not self.is_long and not self.is_short:  # not in the market
             if self.rmi > 50:# and self.accdescos > 0:
-                if self.cross_over == 1:
+                if self.cross_over == 1: #self.rsi_long == 1
                     self.buy(size=order_size)  # enter long
-                    self.entry_price = self.data
-                    self.stop_atr = atr_stop_loss * self.atr
+                    self.entry_price = self.data[0]
+                    self.stop_atr_long = self.entry_price - atr_stop_loss * self.atr
+                    self.is_long = True
                     print("Entering long")
                     print(self.data[0])
-                    print("Stop loss long: ", self.entry_price + self.stop_atr)
-                    self.tp_1 = False
-                    self.tp_2 = False
-                    self.tp_3 = False
+                    print("Stop loss long: ", self.stop_atr_long)
 
         # short entry
-        if not self.position:  # not in the market
-            print("pos size lmao", self.position.size)
+        if not self.position and not self.is_long and not self.is_short:  # not in the market
             if self.rmi > 50:# and self.accdescos > 0:
-                if self.cross_over == -1:
+                if self.cross_over == -1: #self.rsi_short: == -1
                     self.sell(size=order_size)  # enter short
-                    self.entry_price = self.data
-                    self.stop_atr = atr_stop_loss * self.atr
+                    self.entry_price = self.data[0]
+                    self.stop_atr_short = self.entry_price + atr_stop_loss * self.atr
+                    self.is_short = True
                     print("Entering short")
                     print(self.data[0])
-                    print("Stop loss short: ", self.entry_price - self.stop_atr)
-                    self.tp_1 = False
-                    self.tp_2 = False
-                    self.tp_3 = False
+                    print("Stop loss short: ", self.stop_atr_short)
 
 
-
-        # long exit
-        if self.position and self.position.size > 0:
+        '''# long exit
+        if self.position.size > 0:
             if self.cross_over_aroon == 1:  # in the market & cross to the downside
                 self.close()  # close long position
-                self.break_even = False
+                self.is_long = False
                 print("Exiting long")
                 print(self.data[0])
-                self.tp_1 = False
-                self.tp_2 = False
-                self.tp_3 = False
 
         # short exit
-        if self.position and self.position.size < 0:
+        if self.position.size < 0:
             if self.cross_over_aroon == -1:  # in the market & cross to the upside
                 self.close()  # close short position
-                self.break_even = False
+                self.is_short = False
                 print("Exiting short")
-                print(self.data[0])
-                print("pos size", self.position.size)
-                self.tp_1 = False
-                self.tp_2 = False
-                self.tp_3 = False
+                print(self.data[0])'''
 
-        # define break even stop loss
-        # stop loss for long
-        if self.position and not self.break_even and self.position.size > 0:
-            if self.data > self.entry_price + self.stop_atr:
-                self.break_even = True
-                print("Moving long stop loss to break even")
-                print(self.data[0])
-
-            elif self.data <= self.entry_price - self.stop_atr and not self.break_even:
+        # define stop loss and take profit 1, 2 and 3
+        #stop loss long
+        if self.is_long:
+            if self.data <= self.stop_atr_long:
                 self.close()
-                print("Long Stop loss hit")
-                print(self.data[0])
-                self.tp_1 = False
-                self.tp_2 = False
-                self.tp_3 = False
+                self.is_long = False
+                print("Long stop loss hit", self.data[0])
 
-            elif self.data <= self.entry_price and self.break_even:
+        # stop loss short
+        if self.is_short:
+            if self.data >= self.stop_atr_short:
                 self.close()
-                print("Break even stop loss hit")
-                print(self.data[0])
-                self.tp_1 = False
-                self.tp_2 = False
-                self.tp_3 = False
+                self.is_short = False
+                print("Short stop loss hit", self.data[0])
 
-        # stop loss for short
-        if self.position and not self.break_even and self.position.size < 0:
-            if self.data > self.entry_price - self.stop_atr:
-                self.break_even = True
-                print("Moving short stop loss to break even")
-                print(self.data[0])
+        # take profit 1 long
+        if self.is_long and self.entry_price + atr_take_profit_1 * self.atr and not self.take_profit_1:
+            self.sell(size=order_size / 4)
+            self.take_profit_1 = True
+            self.stop_atr_long = self.data[0] - self.atr
+            print("Profit long 1")
+        # take profit 2 long
+        if self.is_long and self.entry_price + atr_take_profit_2 * self.atr and not self.take_profit_1 and not self.take_profit_2:
+            self.sell(size=order_size / 4)
+            self.take_profit_2 = True
+            self.stop_atr_long = self.data[0] - self.atr
+            print("Profit long 2")
+        # take profit 3 long
+        if self.is_long and self.entry_price + atr_take_profit_3 * self.atr and not self.take_profit_1 and not self.take_profit_2 and not self.take_profit_3:
+            self.sell(size=order_size / 4)
+            self.take_profit_3 = True
+            self.stop_atr_long = self.data[0] - self.atr
+            print("Profit long 3")
 
-            elif self.data >= self.entry_price + self.stop_atr and not self.break_even:
-                self.close()
-                print("Short Stop loss hit")
-                print(self.data[0])
-                self.tp_1 = False
-                self.tp_2 = False
-                self.tp_3 = False
-
-            elif self.data <= self.entry_price and self.break_even:
-                self.close()
-                print("Break even stop loss hit")
-                print(self.data[0])
-                self.tp_1 = False
-                self.tp_2 = False
-                self.tp_3 = False
-
-        '''# take profit in 3 levels
-        # long
-        if self.position and self.position.size > 0:
-            #level 1
-            if self.data > self.entry_price + atr_take_profit_1 and not self.tp_1:
-                self.sell(size=order_size / 4)
-                self.tp_1 = True
-                print("tp long 1")
-            #level 2
-            elif self.data > self.entry_price + atr_take_profit_2 and not self.tp_2:
-                self.sell(size=order_size / 4)
-                self.tp_2 = True
-                print("tp long 2")
-            #level 3
-            elif self.data > self.entry_price + atr_take_profit_3 and not self.tp_3:
-                self.sell(size=order_size / 4)
-                self.tp_3 = True
-                print("tp long 3")
-
-        # short
-        if self.position and self.position.size < 0:
-            #level 1
-            if self.data < self.entry_price + atr_take_profit_1 and not self.tp_1:
-                self.buy(size=order_size / 4)
-                self.tp_1 = True
-                print("tp short 1")
-            #level 2
-            elif self.data < self.entry_price - atr_take_profit_2 and not self.tp_2:
-                self.buy(size=order_size / 4)
-                self.tp_2 = True
-                print("tp short 2")
-            #level 3
-            elif self.data < self.entry_price - atr_take_profit_3 and not self.tp_3:
-                self.buy(size=order_size / 4)
-                self.tp_3 = True
-                print("tp short 3")'''
+        # take profit 1 short
+        if self.is_short and self.entry_price - atr_take_profit_1 * self.atr and not self.take_profit_1:
+            self.sell(size=order_size / 4)
+            self.take_profit_1 = True
+            self.stop_atr_short = self.data[0] + self.atr
+            print("Profit short 1")
+        # take profit 2 short
+        if self.is_short and self.entry_price - atr_take_profit_2 * self.atr and not self.take_profit_1 and not self.take_profit_2:
+            self.sell(size=order_size / 4)
+            self.take_profit_1 = True
+            self.stop_atr_short = self.data[0] + self.atr
+            print("Profit short 2")
+        # take profit 3 short
+        if self.is_short and self.entry_price - atr_take_profit_3 * self.atr and not self.take_profit_1 and not self.take_profit_2 and not self.take_profit_3:
+            self.sell(size=order_size / 4)
+            self.take_profit_1 = True
+            self.stop_atr_short = self.data[0] + self.atr
+            print("Profit short 3")
 
 
 ### Helper Functions
@@ -225,12 +188,15 @@ def fxcm_df_to_bt_df(df):
 
 
 # Initialize Cerebro:
-cerebro = bt.Cerebro(optreturn=False)
+cerebro = bt.Cerebro(optreturn=False, cheat_on_open=True)
 
 # Add strategy to cerebro. To avoid merge errors, it detects which strategy to apply
 
 
 cerebro.addstrategy(StratEric)
+
+#optimize strategy
+#cerebro.optstrategy(StratEric, aroon_period=range(2, 14))
 
 # Transform data
 dataframe = fxcm_df_to_bt_df(data)
@@ -252,7 +218,8 @@ cerebro.run()
 earnings = (cerebro.broker.getvalue() - starting_cash) * leverage
 print("Cash after running: ", cerebro.broker.getvalue())
 print("Earnings with leverage: ", earnings)
+print("percent profit with leverage: ", round(earnings / starting_cash * 100, 2), "%")
 print("Per Month: ", earnings / 12)
 print("Per Week: ", earnings / 52)
 print("Per Day: ", earnings / 365)
-cerebro.plot() #style='candlestick', barup='green', bardown='red'
+cerebro.plot(style='candlestick', barup='green', bardown='red')
