@@ -5,6 +5,7 @@ import getpass
 import numpy as np
 import pandas as pd
 import os.path
+from custom_indicators import RelativeVigorIndex
 
 ###
 # Define Parameters here!
@@ -51,29 +52,6 @@ else:
     con.close()
     data.to_csv(path_to_data)
 
-class RelativeVigorIndex(bt.Indicator):
-    lines = ('RVI', 'Signal',)
-    params = dict(period = 20, movav = bt.ind.MovAv.Simple)
-    def __init__(self):
-        self.addminperiod(self.p.period)
-        self.a = self.data.close(0) - self.data.open(0)
-        self.b = self.data.close(-1) - self.data.open(-1)
-        self.c = self.data.close(-2) - self.data.open(-2)
-        self.d = self.data.close(-3) - self.data.open(-3)
-        self.e = self.data.high(0) - self.data.low(0)
-        self.f = self.data.high(-1) - self.data.low(-1)
-        self.g = self.data.high(-2) - self.data.low(-2)
-        self.h = self.data.high(-3) - self.data.low(-3)
-        self.numerator = (self.a + (2 * self.b) + (2 * self.c) + self.d) / 6
-        self.denominator = (self.e + (2 * self.f) + (2 * self.g) + self.h) / 6
-        #self.lines.Signal = bt.Max(0.0, self.params.days_prior)
-        self.sma_num = bt.ind.MovAv.Simple(self.numerator, period=self.p.period)
-        self.sma_den = bt.ind.MovAv.Simple(self.denominator, period=self.p.period)
-        self.lines.RVI = self.sma_num / self.sma_den
-        self.i = self.lines.RVI(-1)
-        self.j = self.lines.RVI(-2)
-        self.k = self.lines.RVI(-3)
-        self.lines.Signal = (self.lines.RVI + (2 * self.i) + (2 * self.j) + self.k) / 6
 
 ### Define Indicators and signals
 

@@ -101,63 +101,6 @@ class StratVincenzo(bt.Strategy):
         elif self.schaff_cycle > 0.5:  # in the market & cross to the downside
             self.close()  # close long position
 
-
-class StratEric(bt.Strategy):
-    def __init__(self):
-        # Define indicators
-        self.atr = bt.ind.AverageTrueRange()
-        self.laguerre = bt.ind.LaguerreFilter()
-        self.laguerreRSI = bt.ind.LaguerreRSI()
-        self.accdescos = bt.ind.AccelerationDecelerationOscillator()
-        self.aroon = bt.ind.AroonUpDown()
-
-        # define variables for money management
-        self.break_even = False
-        self.entry_price = self.data
-
-    def next(self):
-        # long entry
-        if not self.position:  # not in the market
-            if self.laguerreRSI > 0.0:
-                if self.laguerre < self.data:
-                    self.buy(size=order_size)  # enter long
-                    self.entry_price = self.data
-
-        # short entry
-        elif not self.position:  # not in the market
-            if self.laguerre < self.data:
-                self.sell(size=order_size)  # enter short
-                self.entry_price = self.data
-
-        # money management
-        stop_atr = 1.5 * self.atr
-        entry_price = 10
-        break_even = False
-        # define break even stop loss
-        if self.position:
-            if self.data >= entry_price + stop_atr:
-                self.break_even = True
-
-            elif self.data <= entry_price - stop_atr and not break_even:
-                self.close()
-
-            elif self.data <= entry_price and break_even:
-                self.close()
-
-        # long exit
-        elif self.position:
-            if self.laguerreRSI < 0.5:  # in the market & cross to the downside
-                self.close()  # close long position
-                self.break_even = False
-
-        # short exit
-        elif self.position:
-            if self.laguerre > self.data:  # in the market & cross to the downside
-                self.close()  # close short position
-                self.break_even = False
-
-
-
 ### Helper Functions
 columns_to_keep = []
 for key, value in renaming.items():
