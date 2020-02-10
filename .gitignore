@@ -132,5 +132,6 @@ dmypy.json
 fxcm_log
 fxcm.cfg
 simple_candlestick.html
+
 # Intellj Pycharm
 .idea
