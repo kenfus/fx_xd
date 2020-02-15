@@ -1,11 +1,12 @@
 import datetime as dt
 import getpass
 import os.path
-import backtrader as bt
+import inspect
 import fxcmpy
 import pandas as pd
-import numpy as np
+
 from custom_indicators import *
+
 # Is Eric or Vincenzo using this script?
 username = getpass.getuser().lower()
 
@@ -13,7 +14,7 @@ username = getpass.getuser().lower()
 # Define Parameters here!
 token_to_trade = 'GBP/CHF'
 time_frame = 'D1'
-start_dt = dt.datetime(2017, 7, 1)
+start_dt = dt.datetime(2019, 1, 1)
 stop_dt = dt.datetime(2020, 2, 3)
 server_type = 'demo'  # server = 'real' for live
 config_file_path = 'fxcm.cfg'
@@ -50,27 +51,42 @@ else:
 class trading_strategy(bt.Strategy):
     params = (('threshold_long', 0.5),
               ('threshold_short', 0.5),
-              ('period', 12),
+              ('conf2_threshold', 0.3),
+              ('period_entry', 12),
+              ('period_exit', 12),
+              ('period_baseline', 12),
+              ('period_vol_ind', 12),
+              ('period_conf2', 12),
+              ('period_conf1', 7),
+              # ('volume_ind', 'OBV'),
+              ('vol_threshold', 50),
               ('entry_ind', 'SMA'),
-              ('conf_ind', 'SMA'),
+              ('conf_ind', 'LRSI'),
+              ('conf_ind2', 'VQZL_NORM'),
               ('exit_ind', 'SMA'),
               ('baseline_ind', 'SMA'),
+              ('volume_ind', 'SMA'),
               )
 
     def __init__(self):
         self.startcash = self.broker.getvalue()
         self.threshold_long = self.params.threshold_long
         self.threshold_short = self.params.threshold_short
-        self.baseline = getattr(bt.ind, self.params.baseline_ind)(period=self.params.period)
-        self.conf_ind = getattr(bt.ind, self.params.conf_ind)(period=self.params.period)
-        self.exit_ind = getattr(bt.ind, self.params.entry_ind)(period=self.params.period)
+        self.vol_threshold = self.params.vol_threshold
+        self.conf2_threshold = self.p.conf2_threshold
+        self.baseline = getattr(bt.ind, self.params.baseline_ind)(period=self.params.period_baseline)
+        self.conf_ind = getattr(bt.ind, self.params.conf_ind)(period=self.params.period_conf1)
+        self.conf2_ind = getattr(bt.ind, self.params.conf_ind2)(period=self.params.period_conf2)
+        # self.volume_ind = getattr(bt.ind, self.params.volume_ind)()
+        self.exit_ind = getattr(bt.ind, self.params.exit_ind)(period=self.params.period_exit)
 
     def next(self):
         if not self.position:  # not in the market
-            if self.conf_ind < self.data.close:
+            if self.conf_ind > self.threshold_long:
                 if self.baseline < self.data.close:
-                    self.buy(size=order_size)  # enter long
-        elif self.exit_ind > self.data.close:  # in the market & cross to the downside
+                    if self.exit_ind > 0:
+                        self.buy(size=order_size)  # enter long
+        elif self.conf_ind < 0.3:  # in the market & cross to the downside
             self.close()  # close long position
 
 
@@ -86,8 +102,9 @@ class StratVincenzo(bt.Strategy):
         self.threshold_long = self.params.threshold_long
         self.threshold_short = self.params.threshold_short
         self.laguerreRSI = bt.ind.LaguerreRSI()
-        self.schaff_cycle = schaff_trend_cycle()
+        self.schaff_cycle = SchaffTrendCycle()
         self.macdh = bt.ind.MACDHisto()
+        self.vqzl = VolatilityQualityZeroLine()
         self.kama = bt.ind.AdaptiveMovingAverage()
         self.atr = bt.ind.AverageTrueRange(period=14)
 
@@ -95,11 +112,12 @@ class StratVincenzo(bt.Strategy):
         if not self.position:  # not in the market
             if self.laguerreRSI[0] > self.threshold_long:
                 if self.kama < self.data.close:
-                    print(self.schaff_cycle[0])
-                    if self.schaff_cycle[0] < 0.5:
+                    if self.vqzl[0] < 0.5:
+                        print(self.vqzl[0])
                         self.buy(size=order_size)  # enter long
         elif self.schaff_cycle > 0.5:  # in the market & cross to the downside
             self.close()  # close long position
+
 
 ### Helper Functions
 columns_to_keep = []
@@ -112,16 +130,21 @@ def fxcm_df_to_bt_df(df):
     df.rename(columns=renaming, inplace=True)
     return df
 
+
 if __name__ == '__main__':
     # Initialize Cerebro:
-    cerebro = bt.Cerebro()
+    cerebro = bt.Cerebro(optreturn=False)
 
     # Add strategy to cerebro. To avoid merge errors, it detects which strategy to apply
     if username.find('vinc') >= 0:
-        cerebro.addstrategy(StratVincenzo)
-        # cerebro.optstrategy(StratVincenzo, period=range(3, 7), threshold_long=np.arange(0.4, 0.7, 0.1),
-        #                     threshold_short=np.arange(0.2, 0.5, 0.1), exit_ind=['SMA', 'EMA'], entry_ind=['SMA', 'EMA'],
-        #                     conf_ind=['SMA', 'EMA'], baseline_ind=['SMA', 'EMA'])
+        # cerebro.addstrategy(StratVincenzo)
+        cerebro.optstrategy(trading_strategy, period_exit=range(10, 13), period_conf1=range(5, 8),
+                            period_baseline=range(6, 13), conf2_threshold=0,
+                            threshold_long=np.arange(0.3, 0.7, 0.1),
+                            vol_threshold=1, exit_ind=['RelativeVigorIndexHisto'],
+                            # threshold_short=np.arange(0.5, 0.8, 0.1),
+                            entry_ind=['KAMA'], conf_ind=['LRSI'], conf_ind2=['VQZL_NORM'],
+                            volume_ind=['OBV'], baseline_ind=['LaguerreFilter', 'EMA'])
 
         # cerebro.optstrategy(StratVincenzo, period=range(3, 7))
         print('High IQ detected')
@@ -144,46 +167,37 @@ if __name__ == '__main__':
     cerebro.broker.setcommission(commission=commission)
 
     # Run over everything
-    opt_runs = cerebro.run(runonce=False)
+    opt_runs = cerebro.run()
     final_results_list = []
 
-    # # run in opt_run
-    # for run in opt_runs:
-    #     for strategy in run:
-    #         value = round(strategy.broker.get_value(), 2)
-    #         PnL = round(value - startcash, 2)
-    #         percent_PnL = round(PnL / order_size * 100, 2)
-    #         period = strategy.params.period
-    #         threshold_long = round(strategy.params.threshold_long, 2)
-    #         threshold_short = round(strategy.params.threshold_short, 2)
-    #         exit_ind = strategy.params.exit_ind
-    #         entry_ind = strategy.params.entry_ind
-    #         conf_ind = strategy.params.conf_ind
-    #         baseline_ind = strategy.params.baseline_ind
-    #         final_results_list.append(
-    #             [period, threshold_long, threshold_short, PnL, percent_PnL, exit_ind, entry_ind, conf_ind, baseline_ind])
-    #
-    # by_PnL = sorted(final_results_list, key=lambda x: x[3], reverse=True)
-    #
-    # # Print results
-    # print('Results: Ordered by Profit:')
-    # for result in by_PnL[:30]:
-    #     print(
-    #         'MA Period: {}, lRSI-threshold long: {}. lRSI-threshold short: {}, '
-    #         'Final PnL: {}, Final PnL-%: {}, Exit Indicator: {}, Entry Indicator: {}, Confirmation indicator: {}, Baseline indicator: {}'.format(
-    #             result[0], result[1],
-    #             result[2], result[3],
-    #             result[4], result[5],
-    #             result[6], result[7],
-    #             result[8]))
-    # Run over everything
-    starting_cash = cerebro.broker.getvalue()
-    print("Cash before running: ", starting_cash)
-    cerebro.run()
-    earnings = (cerebro.broker.getvalue() - starting_cash) * leverage
-    print("Cash after running: ", cerebro.broker.getvalue())
-    print("Earnings with leverage: ", earnings)
-    print("Per Month: ", earnings / 12)
-    print("Per Week: ", earnings / 52)
-    print("Per Day: ", earnings / 365)
-    cerebro.plot()  # style='candlestick', barup='green', bardown='red'
+    # run in opt_run
+    for run in opt_runs:
+        for strategy in run:
+            value = round(strategy.broker.get_value(), 2)
+            PnL = round(value - startcash, 2)
+            percent_PnL = round(PnL / order_size * 100, 2)
+            conf_ind = strategy.params.conf_ind
+            conf_ind2 = strategy.params.conf_ind2
+            exit_ind = strategy.params.exit_ind
+            baseline_ind = strategy.params.baseline_ind
+            period_conf1 = strategy.params.period_conf1
+            threshold_long = round(strategy.params.threshold_long, 2)
+            conf2_threshold = round(strategy.params.conf2_threshold, 2)
+            period_baseline = strategy.params.period_baseline
+            final_results_list.append(
+                [PnL, percent_PnL, conf_ind, conf_ind2, exit_ind, baseline_ind,
+                 period_conf1, threshold_long, conf2_threshold, period_baseline])
+
+    by_PnL = sorted(final_results_list, key=lambda x: x[1], reverse=True)
+
+    # Print results
+    print('Results: Ordered by Profit:')
+    for result in by_PnL[:15]:
+        print(
+            'Final PnL: {}, Final PnL-%: {}, Conf Indicator: {}, Conf2 Indicator: {}, Exit indicator: {}, Baseline indicator: {}'
+            ', Period Conf 1: {}, Threshold Long: {}, Period Conf 2 : {} , Baseline Indicator Period: {}'.format(
+                result[0], result[1],
+                result[2], result[3],
+                result[4], result[5],
+                result[6], result[7],
+                result[8], result[9]))

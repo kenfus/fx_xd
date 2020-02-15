@@ -1,9 +1,9 @@
 import backtrader as bt
 import numpy as np
 
-class schaff_trend_cycle(bt.ind.PeriodN):
-    lines = ('schaff_cycle', 'f1', 'f2', 'pf',)
-
+class SchaffTrendCycle(bt.ind.PeriodN):
+    lines = ('schaff_cycle',)
+    alias = ('STC')
     params = (('length', 20),
               ('slowLength', 23),
               ('fastLength', 50),
@@ -14,18 +14,20 @@ class schaff_trend_cycle(bt.ind.PeriodN):
         self.m = bt.ind.MACDHisto(self.data.close, period_me1=self.p.fastLength, period_me2=self.p.slowLength)
         self.v1 = bt.ind.Lowest(self.m, period=self.p.length)
         self.v2 = bt.ind.Highest(self.m, period=self.p.length) - self.v1
-        self.l.f1 = bt.If(self.v2 > 0, (self.m - self.v1) / self.v2 * 100, self.lines.f1(-1))
-        self.l.pf = self.l.pf(-1) + (self.p.factor * (self.l.f1 - self.l.pf(-1)))
-        self.v3 = bt.ind.Lowest(self.l.pf, period=self.p.length)
-        self.v4 = bt.ind.Highest(self.l.pf, period=self.p.length) - self.v3
-        self.l.f2 = bt.If(self.v4 > 0, ((self.l.pf - self.v3) / self.v4) * 100, self.l.f2(-1))
-        self.l.schaff_cycle = self.l.schaff_cycle(-1) + (
-                self.p.factor * (self.l.f2 - self.l.schaff_cycle(-1)))
 
-    def nextstart(self):
-        self.l.f2[0] = 0.0
-        self.l.pf[0] = 0.0
-        self.l.schaff_cycle[0] = 0.0
+    def next(self):
+        self.f1[0] = (self.m[0] - self.v1[0]) / self.v2[0] * 100 if self.v2[0] > 0 else self.f1[-1]
+        self.pf[0] = self.pf[-1] + (self.p.factor * (self.f1[0] - self.pf[-1]))
+        self.v3 = bt.ind.Lowest(self.pf, period=self.p.length)
+        self.v4 = bt.ind.Highest(self.pf, period=self.p.length) - self.v3
+        self.f2[0] = ((self.pf[0] - self.v3[0]) / self.v4[0]) * 100 if self.v4[0] > 0 else self.f2[-1]
+        self.l.schaff_cycle[0] = self.l.schaff_cycle[-1] + (
+                self.p.factor * (self.f2[0] - self.l.schaff_cycle[-1]))
+
+    def nextstart(self):  # calculate here the seed value
+        self.f1[0] = sum(self.data.get(size=self.p.length)) / self.p.length
+        self.pf[0] = sum(self.data.get(size=self.p.length)) / self.p.length
+        self.f2[0] = sum(self.data.get(size=self.p.length)) / self.p.length
 
 
 class RelativeVigorIndex(bt.Indicator):
@@ -61,7 +63,7 @@ class RelativeVigorIndexSignal(bt.Indicator):
         self.k = self.lines.RVI(-3)
         self.lines.Signal = (self.lines.RVI + (2 * self.i) + (2 * self.j) + self.k) / 6
 
-class RelativeVigorIndexWithSignal(bt.Indicator):
+ class RelativeVigorIndexWithSignal(bt.Indicator):
     lines = ('RVI', 'Signal',)
     params = dict(period=20, movav=bt.ind.MovAv.Simple)
 
@@ -79,3 +81,21 @@ class SelfAdjustingRelativeStrengthIndex(bt.Indicator):
         self.lines.srsi = bt.ind.RelativeStrengthIndex()
         self.lines.upper = 50 + 1.8 * bt.ind.StandardDeviation(self.srsi, period=self.p.period)
         self.lines.lower = 50 - 1.8 * bt.ind.StandardDeviation(self.srsi, period=self.p.period)
+
+class VolatilityQualityZeroLine(bt.Indicator):
+    lines = ('vqzl',)
+    params = dict(PriceSmoothing=7, movav=bt.ind.WeightedMovingAverage)
+
+    def __init__(self):
+        self.cHigh = self.p.movav(self.data.high, period=self.p.PriceSmoothing)
+        self.cLow = self.p.movav(self.data.low, period=self.p.PriceSmoothing)
+        self.cOpen = self.p.movav(self.data.open, period=self.p.PriceSmoothing)
+        self.cClose = self.p.movav(self.data.close, period=self.p.PriceSmoothing)
+        self.trueRange = bt.ind.Highest(self.cHigh, self.cClose) - bt.ind.Lowest(self.cLow, self.cClose(-1))
+        self.rrange = self.cHigh - self.cLow
+        try:
+            self.l.vqi = (self.cClose - self.cClose(-1)) / self.trueRange + (
+                        self.cClose - self.cOpen) / self.rrange * 0.5
+        except:
+            self.l.vqi = self.l.vqi(-1)
+        self.l.vqzl = abs(self.l.vqi) * (self.cClose - self.cClose(-1) + self.cClose - self.cOpen) * 1000
