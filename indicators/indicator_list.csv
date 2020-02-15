@@ -1,0 +1,9 @@
+Name,Logic_L,Th_L,Logic_S,Th_S,Param,Param2,Param3,Type
+RSI,>,"np.range(0.5,0.8,0.1)",<,"np.range(0.1,0.5,0.1)","period=range(3,8)",None,None,Conf1
+EMA,<,None,>,None,"period=range(3,8)",None,None,Baseline
+KAMA,<,None,>,None,"fast=range(3,8)","slow=range(27,35)",None,Baseline
+AroonOSc,>,None,<,None,"period=range(9,15)",None,None,Conf1
+lRSI,>,"np.range(0.5,0.8,0.1)",<,"np.range(0.1,0.5,0.1)","period=range(3,8)",None,None,Baseline
+LaguerreFilter,<,None,>,None,"period=range(3,8)","gamma=np.arange(0.3,0.6, 0.1)",None,Baseline
+AroonOSc,>,None,<,None,"period=range(9,15)",None,None,Conf2
+RSI,>,"np.range(0.5,0.8,0.1)",<,"np.range(0.1,0.5,0.1)","period=range(3,8)",None,None,Conf2
