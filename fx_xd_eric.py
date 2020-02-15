@@ -5,11 +5,14 @@ import getpass
 import numpy as np
 import pandas as pd
 import os.path
-from custom_indicators import RelativeVigorIndex
-
+from custom_indicators import RelativeVigorIndex, RelativeVigorIndexSignal, SelfAdjustingRelativeStrengthIndex
+#Telegram bot
+from telegram.ext import Updater
+from telegram.ext import CommandHandler
+import telegram
 ###
 # Define Parameters here!
-token_to_trade = 'GBP/CHF' # 'AUD/NZD'
+token_to_trade = 'GBP/CHF'#'AUD/NZD'
 time_frame = 'D1'
 start_dt = dt.datetime(2019, 1, 1)
 stop_dt = dt.datetime(2019, 12, 31)
@@ -31,6 +34,7 @@ percentage_to_trade = 0.02
 # indicator parameters
 aroon_period = 4
 srsi_period = 14
+rvi_period = 14
 
 # Create File-Name for Forex-Data
 path_to_data_folder = 'data/'
@@ -52,6 +56,16 @@ else:
     con.close()
     data.to_csv(path_to_data)
 
+#Set up Telegram bot
+telegram_token = '979162059:AAGaEqWhC8E0S_o3rsYYZEVYHZpN0n5YcnA'
+
+updater = Updater(token=telegram_token, use_context=True)
+dispatcher = updater.dispatcher
+
+bot = telegram.Bot(token = telegram_token)
+send_telegram_message = False
+if send_telegram_message:
+    bot.send_message(chat_id=536080467, text='Starting back testing now for ' + str(token_to_trade))
 
 ### Define Indicators and signals
 
@@ -70,11 +84,14 @@ class StratEric(bt.Strategy):
         self.rsi_long = bt.ind.CrossOver(self.rsi, 30,plot = False)
         self.rsi_short = bt.ind.CrossOver(self.rsi, 70,plot = False)
         self.rmi = bt.ind.RelativeMomentumIndex(plot = False) # volume indicator
-        self.aroon = bt.ind.AroonUpDown()
+        #self.aroon = bt.ind.AroonUpDown()
         self.srsi = bt.ind.RelativeStrengthIndex(period = srsi_period, plot = False)
-        self.srsi_overbought = bt.ind.CrossOver(self.rsi, 50 + 1.8 * bt.ind.StandardDeviation(self.srsi, period = srsi_period, plot = False))#, plot = False)
-        self.srsi_oversold = bt.ind.CrossOver(self.rsi, 50 - 1.8 * bt.ind.StandardDeviation(self.srsi, period = srsi_period, plot = False))#, plot = False)
-        self.rvi = RelativeVigorIndex(period = 14)
+        self.srsi_overbought = bt.ind.CrossOver(self.rsi, 50 + 1.8 * bt.ind.StandardDeviation(self.srsi, period = srsi_period, plot = False), plot = False)
+        self.srsi_oversold = bt.ind.CrossOver(self.rsi, 50 - 1.8 * bt.ind.StandardDeviation(self.srsi, period = srsi_period, plot = False), plot = False)
+        self.rvi = RelativeVigorIndex(period = rvi_period, plot = False)
+        self.rvi_signal = RelativeVigorIndexSignal(period = rvi_period, plot = False)
+        self.rvi_cross = bt.ind.CrossOver(self.rvi, self.rvi_signal)
+        self.asdf = SelfAdjustingRelativeStrengthIndex()
 
         # define variables for money management
         self.break_even = False
@@ -88,35 +105,40 @@ class StratEric(bt.Strategy):
         # use percentage of current cash amount for trading
         order_size = percentage_to_trade * self.broker.getvalue()
         self.current_price = self.data[0]
-        print(self.rvi[0])
         # long entry
         if not self.position and not self.is_long and not self.is_short:  # not in the market
-            if self.rmi > 50:# and self.accdescos > 0:
-                if self.srsi_oversold == 1: #self.rsi_long == 1
-                    self.buy(size=order_size)  # enter long
-                    self.entry_price = self.data[0]
-                    self.stop_atr_long = self.entry_price - atr_stop_loss * self.atr
-                    self.is_long = True
-                    print("Entering long")
-                    print(self.data[0])
-                    print("Stop loss long: ", self.stop_atr_long)
+            if self.laguerre < self.current_price: #baseline
+                if self.rmi > 50:# and self.accdescos > 0: #Volume indicator
+                    if self.srsi_oversold == 1: #self.rsi_long == 1
+                        self.buy(size=order_size)  # enter long
+                        self.entry_price = self.data[0]
+                        self.stop_atr_long = self.entry_price - atr_stop_loss * self.atr
+                        self.is_long = True
+                        print("Entering long")
+                        print(self.data[0])
+                        print("Stop loss long: ", self.stop_atr_long)
+                        if send_telegram_message:
+                            bot.send_message(chat_id=536080467, text=token_to_trade + ':\nEntering long at ' + str(self.data[0]))
 
         # short entry
         if not self.position and not self.is_long and not self.is_short:  # not in the market
-            if self.rmi > 50:# and self.accdescos > 0:
-                if self.srsi_overbought == -1: #self.rsi_short: == -1
-                    self.sell(size=order_size)  # enter short
-                    self.entry_price = self.data[0]
-                    self.stop_atr_short = self.entry_price + atr_stop_loss * self.atr
-                    self.is_short = True
-                    print("Entering short")
-                    print(self.data[0])
-                    print("Stop loss short: ", self.stop_atr_short)
+            if self.laguerre > self.current_price:  # baseline
+                if self.rmi > 50:# and self.accdescos > 0: #Volume indicator
+                    if self.srsi_overbought == -1: #self.rsi_short: == -1
+                        self.sell(size=order_size)  # enter short
+                        self.entry_price = self.data[0]
+                        self.stop_atr_short = self.entry_price + atr_stop_loss * self.atr
+                        self.is_short = True
+                        print("Entering short")
+                        print(self.data[0])
+                        print("Stop loss short: ", self.stop_atr_short)
+                        if send_telegram_message:
+                            bot.send_message(chat_id=536080467, text=token_to_trade + ':\nEntering short at ' + str(self.data[0]))
 
 
         # long exit
         if self.position.size > 0:
-            if self.cross_over_aroon == 1:  # in the market & cross to the downside
+            if self.cross_over_aroon == 1:  # in the market & cross to the downside self.rvi_cross == -1: #
                 self.close()  # close long position
                 self.is_long = False
                 '''self.take_profit_1 = False
@@ -124,10 +146,12 @@ class StratEric(bt.Strategy):
                 self.take_profit_3 = False'''
                 print("Exiting long")
                 print(self.data[0])
+                if send_telegram_message:
+                    bot.send_message(chat_id=536080467, text=token_to_trade + ':\nExiting long at ' + str(self.data[0]))
 
         # short exit
         if self.position.size < 0:
-            if self.cross_over_aroon == -1:  # in the market & cross to the upside
+            if self.cross_over_aroon == -1:  # in the market & cross to the upside self.rvi_cross == 1: #
                 self.close()  # close short position
                 self.is_short = False
                 '''self.take_profit_1 = False
@@ -135,6 +159,8 @@ class StratEric(bt.Strategy):
                 self.take_profit_3 = False'''
                 print("Exiting short")
                 print(self.data[0])
+                if send_telegram_message:
+                    bot.send_message(chat_id=536080467, text=token_to_trade + ':\nExiting short at ' + str(self.data[0]))
 
         # define stop loss and take profit 1, 2 and 3
         #stop loss long
@@ -242,4 +268,8 @@ print("percent profit with leverage: ", round(earnings / starting_cash * 100, 2)
 print("Per Month: ", earnings / 12)
 print("Per Week: ", earnings / 52)
 print("Per Day: ", earnings / 365)
+if send_telegram_message:
+    bot.send_message(chat_id=536080467, text='Finished back testing for ' + str(token_to_trade))
+    bot.send_message(chat_id=536080467, text='Percent profit with leverage: ' + str(round(earnings / starting_cash * 100, 2)) + '%')
+
 cerebro.plot(style='candlestick', barup='green', bardown='red')

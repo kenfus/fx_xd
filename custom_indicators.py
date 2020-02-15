@@ -31,8 +31,7 @@ class SchaffTrendCycle(bt.ind.PeriodN):
 
 
 class RelativeVigorIndex(bt.Indicator):
-    lines = ('RVI', 'Signal',)
-    alias = ('RVI')
+    lines = ('RVI',)
     params = dict(period=20, movav=bt.ind.MovAv.Simple)
 
     def __init__(self):
@@ -51,11 +50,37 @@ class RelativeVigorIndex(bt.Indicator):
         self.sma_num = self.p.movav(self.numerator, period=self.p.period)
         self.sma_den = self.p.movav(self.denominator, period=self.p.period)
         self.lines.RVI = self.sma_num / self.sma_den
+
+class RelativeVigorIndexSignal(bt.Indicator):
+    lines = ('Signal',)
+    params = dict(period=20, movav=bt.ind.MovAv.Simple)
+
+    def __init__(self):
+        self.addminperiod(self.p.period)
+        self.lines.RVI = RelativeVigorIndex()
         self.i = self.lines.RVI(-1)
         self.j = self.lines.RVI(-2)
         self.k = self.lines.RVI(-3)
         self.lines.Signal = (self.lines.RVI + (2 * self.i) + (2 * self.j) + self.k) / 6
 
+ class RelativeVigorIndexWithSignal(bt.Indicator):
+    lines = ('RVI', 'Signal',)
+    params = dict(period=20, movav=bt.ind.MovAv.Simple)
+
+    def __init__(self):
+        self.addminperiod(self.p.period)
+        self.lines.RVI = RelativeVigorIndex()
+        self.lines.Signal = RelativeVigorIndexSignal()
+
+class SelfAdjustingRelativeStrengthIndex(bt.Indicator):
+    lines = ('srsi', 'upper', 'lower',)
+    params = dict(period=20, movav=bt.ind.MovAv.Simple)
+
+    def __init__(self):
+        self.addminperiod(self.p.period)
+        self.lines.srsi = bt.ind.RelativeStrengthIndex()
+        self.lines.upper = 50 + 1.8 * bt.ind.StandardDeviation(self.srsi, period=self.p.period)
+        self.lines.lower = 50 - 1.8 * bt.ind.StandardDeviation(self.srsi, period=self.p.period)
 
 class VolatilityQualityZeroLine(bt.Indicator):
     lines = ('vqzl',)
