@@ -1,12 +1,56 @@
-from telegram.ext import Updater
-from telegram.ext import CommandHandler
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""Simple Bot to reply to Telegram messages.
+This is built on the API wrapper, see echobot2.py to see the same example built
+on the telegram.ext bot framework.
+This program is dedicated to the public domain under the CC0 license.
+"""
+import logging
 import telegram
+from telegram.error import NetworkError, Unauthorized
+from time import sleep
 
-telegram_token = '979162059:AAGaEqWhC8E0S_o3rsYYZEVYHZpN0n5YcnA'
 
-updater = Updater(token=telegram_token, use_context=True)
-dispatcher = updater.dispatcher
+update_id = None
 
-bot = telegram.Bot(token = telegram_token)
 
-bot.send_message(chat_id=536080467, text="I'm sorry Dave I'm afraid I " + str(4) + "can't do that.")
+def main():
+    """Run the bot."""
+    global update_id
+    # Telegram Bot Authorization Token
+    bot = telegram.Bot('979162059:AAGaEqWhC8E0S_o3rsYYZEVYHZpN0n5YcnA')
+
+    # get the first pending update_id, this is so we can skip over it in case
+    # we get an "Unauthorized" exception.
+    try:
+        update_id = bot.get_updates()[0].update_id
+    except IndexError:
+        update_id = None
+
+    logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+    while True:
+        try:
+            echo(bot)
+        except NetworkError:
+            sleep(1)
+        except Unauthorized:
+            # The user has removed or blocked the bot.
+            update_id += 1
+
+
+def echo(bot):
+    """Echo the message the user sent."""
+    global update_id
+    # Request updates after the last update_id
+    for update in bot.get_updates(offset=update_id, timeout=10):
+        update_id = update.update_id + 1
+
+        if update.message:  # your bot can receive updates without messages
+            # Reply to the message
+            update.message.reply_text(update.message.text)
+            update.message.reply_text(update.effective_chat.id)
+
+
+if __name__ == '__main__':
+    main()
