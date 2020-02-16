@@ -10,6 +10,7 @@ from custom_indicators import RelativeVigorIndex, RelativeVigorIndexSignal, Self
 from telegram.ext import Updater
 from telegram.ext import CommandHandler
 import telegram
+import time
 ###
 # Define Parameters here!
 token_to_trade = 'GBP/CHF'#'AUD/NZD'
@@ -58,14 +59,15 @@ else:
 
 #Set up Telegram bot
 telegram_token = '979162059:AAGaEqWhC8E0S_o3rsYYZEVYHZpN0n5YcnA'
-
-updater = Updater(token=telegram_token, use_context=True)
+telegram_chat_id = -341288062
+updater = Updater(token=telegram_token, use_context=True, request_kwargs={'read_timeout': 6, 'connect_timeout': 7})
 dispatcher = updater.dispatcher
 
 bot = telegram.Bot(token = telegram_token)
 send_telegram_message = False
 if send_telegram_message:
-    bot.send_message(chat_id=536080467, text='Starting back testing now for ' + str(token_to_trade))
+    bot.send_message(chat_id=telegram_chat_id, text='Starting back testing now for ' + str(token_to_trade))
+    time.sleep(0.5)
 
 ### Define Indicators and signals
 
@@ -118,7 +120,8 @@ class StratEric(bt.Strategy):
                         print(self.data[0])
                         print("Stop loss long: ", self.stop_atr_long)
                         if send_telegram_message:
-                            bot.send_message(chat_id=536080467, text=token_to_trade + ':\nEntering long at ' + str(self.data[0]))
+                            bot.send_message(chat_id=telegram_chat_id, text=token_to_trade + ':\nEntering long at ' + str(self.data[0]))
+                            time.sleep(0.5)
 
         # short entry
         if not self.position and not self.is_long and not self.is_short:  # not in the market
@@ -133,7 +136,8 @@ class StratEric(bt.Strategy):
                         print(self.data[0])
                         print("Stop loss short: ", self.stop_atr_short)
                         if send_telegram_message:
-                            bot.send_message(chat_id=536080467, text=token_to_trade + ':\nEntering short at ' + str(self.data[0]))
+                            bot.send_message(chat_id=telegram_chat_id, text=token_to_trade + ':\nEntering short at ' + str(self.data[0]))
+                            time.sleep(0.5)
 
 
         # long exit
@@ -147,7 +151,8 @@ class StratEric(bt.Strategy):
                 print("Exiting long")
                 print(self.data[0])
                 if send_telegram_message:
-                    bot.send_message(chat_id=536080467, text=token_to_trade + ':\nExiting long at ' + str(self.data[0]))
+                    bot.send_message(chat_id=telegram_chat_id, text=token_to_trade + ':\nExiting long at ' + str(self.data[0]))
+                    time.sleep(0.5)
 
         # short exit
         if self.position.size < 0:
@@ -160,7 +165,8 @@ class StratEric(bt.Strategy):
                 print("Exiting short")
                 print(self.data[0])
                 if send_telegram_message:
-                    bot.send_message(chat_id=536080467, text=token_to_trade + ':\nExiting short at ' + str(self.data[0]))
+                    bot.send_message(chat_id=telegram_chat_id, text=token_to_trade + ':\nExiting short at ' + str(self.data[0]))
+                    time.sleep(0.5)
 
         # define stop loss and take profit 1, 2 and 3
         #stop loss long
@@ -269,7 +275,10 @@ print("Per Month: ", earnings / 12)
 print("Per Week: ", earnings / 52)
 print("Per Day: ", earnings / 365)
 if send_telegram_message:
-    bot.send_message(chat_id=536080467, text='Finished back testing for ' + str(token_to_trade))
-    bot.send_message(chat_id=536080467, text='Percent profit with leverage: ' + str(round(earnings / starting_cash * 100, 2)) + '%')
+    bot.send_message(chat_id=telegram_chat_id, text='Finished back testing for ' + str(token_to_trade))
+    time.sleep(0.5)
+    bot.send_message(chat_id=telegram_chat_id, text='Percent profit with leverage: ' + str(round(earnings / starting_cash * 100, 2)) + '%')
+    time.sleep(0.5)
 
-cerebro.plot(style='candlestick', barup='green', bardown='red')
+cerebro.plot(style='candlestick', barup='green', bardown='red', savefig=True, figfilename='backtrader-plot.png')
+#cerebro.plot(volume=False, savefig=True, figfilename='backtrader-plot.png')

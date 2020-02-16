@@ -63,7 +63,7 @@ class RelativeVigorIndexSignal(bt.Indicator):
         self.k = self.lines.RVI(-3)
         self.lines.Signal = (self.lines.RVI + (2 * self.i) + (2 * self.j) + self.k) / 6
 
- class RelativeVigorIndexWithSignal(bt.Indicator):
+class RelativeVigorIndexWithSignal(bt.Indicator):
     lines = ('RVI', 'Signal',)
     params = dict(period=20, movav=bt.ind.MovAv.Simple)
 
