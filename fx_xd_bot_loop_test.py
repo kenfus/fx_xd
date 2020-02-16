@@ -5,6 +5,8 @@ import inspect
 import fxcmpy
 import pandas as pd
 import operator
+import ast
+import numbers
 from custom_indicators import *
 
 # Is Eric or Vincenzo using this script?
@@ -34,8 +36,7 @@ path_to_data = 'data/' + file_name + '.csv'
 path_to_indicators = 'indicators/'
 baseline_indicators = pd.read_csv(path_to_indicators + 'baseline_indicators.csv')
 conf_indicators = pd.read_csv(path_to_indicators + 'conf_indicators.csv')
-
-
+maxcpus = 6
 ###
 
 ### Concat IND-Name and parameter-names to avoid duplicate parameter-names
@@ -48,7 +49,6 @@ def concat_name_param(df):
     df['param2_name'] = df['param2_name'] + '_' + df['name']
     df['param3_name'] = df['param3_name'] + '_' + df['name']
     return df
-
 
 base_ind_renamed = concat_name_param(baseline_indicators)
 conf_ind_renamed = concat_name_param(conf_indicators)
@@ -66,18 +66,20 @@ else:
     con.close()
     data.to_csv(path_to_data)
 
-
 ### Function which creates a class and helper functions
 def create_dict_of_placeholder_params_init(*args):
-    params_names, params_values, params_names_with_none, params_values_with_none = [], [], [], []
+    params_names, params_values, params_names_with_none = [], [], []
     for arg in args:
-        params_names_with_none.extend([arg['param1_name'], arg['param2_name'], arg['param3_name'], 'th_l', 'th_s'])
-        params_values_with_none.extend([arg['param1_value'], arg['param2_value'], arg['param3_value'], 0, 0])
+        params_names_with_none.extend([arg['param1_name'], arg['param2_name'], arg['param3_name']])
+        if not pd.isna(arg['th_l']):
+            params_names_with_none.append('th_l')
+        if not pd.isna(arg['th_s']):
+            params_names_with_none.append('th_l')
 
-    [params_names.append(param_name) if not pd.isna(param_name) else None for param_name in params_names_with_none]
-    [params_values.append(param_value) if not pd.isna(param_value) else None for param_value in params_values_with_none]
+    [params_names.append((param_name)) if not pd.isna(param_name) else None for param_name in params_names_with_none]
+    [params_values.append((1)) if not pd.isna(param_name) else None for param_name in params_names_with_none]
+
     return dict(zip(params_names, params_values))
-
 
 def create_dict_of_params(*args):
     params_names, params_values, params_names_with_none, params_values_with_none = [], [], [], []
@@ -85,8 +87,20 @@ def create_dict_of_params(*args):
         params_names_with_none.extend([arg['param1_name'], arg['param2_name'], arg['param3_name']])
         params_values_with_none.extend([arg['param1_value'], arg['param2_value'], arg['param3_value']])
 
-    [params_names.append(param_name) if not pd.isna(param_name) else None for param_name in params_names_with_none]
-    [params_values.append(param_value) if not pd.isna(param_value) else None for param_value in params_values_with_none]
+        if not pd.isna(arg['th_l']):
+            params_names_with_none.append('th_l')
+            params_values_with_none.append(arg['th_l'])
+        if not pd.isna(arg['th_s']):
+            params_names_with_none.append('th_l')
+            params_values_with_none.append(arg['th_l'])
+    [params_names.append((param_name)) if not pd.isna(param_name) else None for param_name in params_names_with_none]
+
+    for param_value in params_values_with_none:
+        if not pd.isna(param_value):
+            if isinstance(param_value, numbers.Number):
+                params_values.append(param_value)
+            else:
+                params_values.append(eval(param_value))
     return dict(zip(params_names, params_values))
 
 
@@ -103,22 +117,36 @@ def create_dict_of_placeholder_params(self, ind):
     return dict(zip(params_org_names, params_names))
 
 
-def baseline_th_l(self, baseline):
-    if not pd.isna(baseline['th_l']):
-        return baseline['th_l']
+def get_operator_fn(op):
+    return {
+        '<=': operator.le,
+        '>=': operator.ge,
+        '<': operator.lt,
+        '>': operator.gt,
+    }[op]
+
+
+def get_value_to_compare(self, str):
+    if not pd.isna(str):
+        th_l = self.params.th_l
     else:
-        return self.close[0]
+        th_l = self.data.close[0]
+    return th_l
 
 
-def conf_th_l(self, conf):
-    if not pd.isna(conf['th_l']):
-        return conf['th_l']
-    else:
-        return self.close[0]
+def baseline_th_l(self, ind):
+    th_l = get_value_to_compare(self, ind['th_l'])
+    return get_operator_fn(ind['logic_l'])(self.baseline[0], th_l)
 
 
-def exec_(ind, logical, th):
-    return exec("operator.le(ind, th)")
+def conf_th_l(self, ind):
+    th_l = get_value_to_compare(self, ind['th_l'])
+    return get_operator_fn(ind['logic_l'])(self.conf1[0], th_l)
+
+
+def conf2_th_l(self, ind):
+    th_l = get_value_to_compare(self, ind['th_l'])
+    return get_operator_fn(ind['logic_l'])(self.conf2[0], th_l)
 
 
 ### Helper Functions
@@ -140,13 +168,11 @@ for index, baseline in base_ind_renamed.iterrows():
                 continue
             if __name__ == '__main__':
                 # Initialize Cerebro:
-                cerebro = bt.Cerebro(optreturn=False)
-
+                cerebro = bt.Cerebro(optreturn=False, maxcpus=maxcpus)
 
                 # Add strategy to cerebro. To avoid merge errors, it detects which strategy to apply
                 class StrategyClass(bt.Strategy):
                     params = create_dict_of_placeholder_params_init(baseline, conf1, conf2)
-                    print(params)
 
                     def __init__(self):
                         self.startcash = self.broker.getvalue()
@@ -160,17 +186,15 @@ for index, baseline in base_ind_renamed.iterrows():
 
                     def next(self):
                         if not self.position:  # not in the market
-                            print(self.baseline[0])
-                            if exec_(self.baseline[0], conf1['logic_l'], conf_th_l(self, conf1)):
-                                if exec_(self.conf1[0], conf1['logic_l'], conf_th_l(self, conf1)):
-                                    if exec("self.conf2[0] conf2['logic_l']) conf_th_l(self, conf2)"):
-                                        print("lul")
+                            if baseline_th_l(self, baseline):
+                                if conf_th_l(self, conf1):
+                                    if conf_th_l(self, conf2):
                                         self.buy(size=order_size)  # enter long
                         elif self.baseline > 0.5:  # in the market & cross to the downside
                             self.close()  # close long position
 
 
-                cerebro.optstrategy(StrategyClass)  # create_dict_of_params(baseline, conf1, conf2)
+                cerebro.optstrategy(StrategyClass, **create_dict_of_params(baseline, conf1, conf2))  #
                 # Transform data
                 dataframe = fxcm_df_to_bt_df(data)
 
@@ -194,29 +218,17 @@ for index, baseline in base_ind_renamed.iterrows():
                         value = round(strategy.broker.get_value(), 2)
                         PnL = round(value - startcash, 2)
                         percent_PnL = round(PnL / order_size * 100, 2)
-                        print(strategy.params)
-                        conf_ind = strategy.params.conf_ind
-                        conf_ind2 = strategy.params.conf_ind2
-                        exit_ind = strategy.params.exit_ind
-                        baseline_ind = strategy.params.baseline_ind
-                        period_conf1 = strategy.params.period_conf1
-                        threshold_long = round(strategy.params.threshold_long, 2)
-                        conf2_threshold = round(strategy.params.conf2_threshold, 2)
-                        period_baseline = strategy.params.period_baseline
-                        final_results_list.append(
-                            [PnL, percent_PnL, conf_ind, conf_ind2, exit_ind, baseline_ind,
-                             period_conf1, threshold_long, conf2_threshold, period_baseline])
-
-                by_PnL = sorted(final_results_list, key=lambda x: x[1], reverse=True)
+                        conf_ind = conf1['name']
+                        conf_ind2 = conf2['name']
+                        baseline_ind = baseline['name']
+                        final_results_list.extend(
+                            [PnL, percent_PnL, conf_ind, conf_ind2, baseline_ind])
+                        desired_output = ['PnL', 'PnL%', 'Conf1 Ind', 'Conf 2 Ind', 'Baseline Ind']
+                        for key, value in create_dict_of_params(baseline, conf1, conf2).items():
+                            final_results_list.append(getattr(strategy.params, key))
+                            desired_output.append(key)
+                final_results_dict = dict(zip(desired_output, final_results_list))
 
                 # Print results
-                print('Results: Ordered by Profit:')
-                for result in by_PnL[:15]:
-                    print(
-                        'Final PnL: {}, Final PnL-%: {}, Conf Indicator: {}, Conf2 Indicator: {}, Exit indicator: {}, Baseline indicator: {}'
-                        ', Period Conf 1: {}, Threshold Long: {}, Period Conf 2 : {} , Baseline Indicator Period: {}'.format(
-                            result[0], result[1],
-                            result[2], result[3],
-                            result[4], result[5],
-                            result[6], result[7],
-                            result[8], result[9]))
+                print('Results, unordered')
+                print(final_results_dict)
