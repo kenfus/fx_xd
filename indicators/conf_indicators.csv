@@ -1,3 +1,3 @@
 name,logic_l,th_l,logic_s,th_s,param1_name,param1_value,param2_name,param2_value,param3_name,param3_value
-RSI,>,"np.range(0.5,0.8,0.1)",<,"np.range(0.1,0.5,0.1)",period,"range(3,8)",,,,
+RSI,>,"np.arange(0.5,0.8,0.1)",<,"np.arange(0.1,0.5,0.1)",period,"range(3,8)",,,,
 AroonOsc,>,0,<,0,period,"range(9,15)",,,,
