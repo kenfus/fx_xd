@@ -14,7 +14,7 @@ import telegram
 # Define Parameters here!
 token_to_trade = 'GBP/CHF'#'AUD/NZD'
 time_frame = 'D1'
-start_dt = dt.datetime(2019, 1, 1)
+start_dt = dt.datetime(2017, 1, 1)
 stop_dt = dt.datetime(2019, 12, 31)
 server_type = 'demo'  # server = 'real' for live
 config_file_path = 'fxcm.cfg'
